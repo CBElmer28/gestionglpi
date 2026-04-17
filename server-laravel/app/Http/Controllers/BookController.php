@@ -29,6 +29,10 @@ class BookController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        if ($request->user()->role === 'lector') {
+            return response()->json(['message' => 'No tiene permisos para realizar esta acción.'], 403);
+        }
+
         $validator = Validator::make($request->all(), [
             'title'        => 'required|string|max:255',
             'author'       => 'required|string|max:255',
@@ -50,6 +54,10 @@ class BookController extends Controller
 
     public function update(Request $request, int $id): JsonResponse
     {
+        if ($request->user()->role === 'lector') {
+            return response()->json(['message' => 'No tiene permisos para realizar esta acción.'], 403);
+        }
+
         $validator = Validator::make($request->all(), [
             'title'        => 'sometimes|string|max:255',
             'author'       => 'sometimes|string|max:255',

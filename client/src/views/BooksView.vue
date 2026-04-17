@@ -6,7 +6,7 @@
         <h1><font-awesome-icon icon="book" /> Catálogo de Libros</h1>
         <p>Administra el inventario de libros y sincroniza con GLPI.</p>
       </div>
-      <div style="display:flex;gap:var(--sp-2)">
+      <div v-if="!auth.isLector" style="display:flex;gap:var(--sp-2)">
         <button class="btn btn-ghost" @click="handleSyncAll" :disabled="syncing">
           <font-awesome-icon icon="sync" :spin="syncing" />
           {{ syncing ? 'Sincronizando...' : 'Sincronizar con GLPI' }}
@@ -17,30 +17,53 @@
       </div>
     </div>
 
-    <!-- Filtros y búsqueda -->
-    <div class="card" style="margin-bottom:var(--sp-5)">
-      <div class="card-body" style="padding:var(--sp-4)">
-        <div class="filters-row">
-          <div class="search-bar" style="flex:1">
-            <span class="search-bar-icon"><font-awesome-icon icon="search" /></span>
-            <input
-              v-model="searchQuery"
-              type="text"
-              class="form-control"
-              placeholder="Buscar por título, autor o ISBN…"
-              @input="onSearch"
+    <!-- Filtros y búsqueda avanzados -->
+    <div class="card overflow-visible" style="margin-bottom:var(--sp-5)">
+      <div class="card-body" style="padding:var(--sp-5)">
+        <div class="filters-grid">
+          <!-- Búsqueda por Texto -->
+          <div class="filter-group">
+            <label class="filter-label">Título</label>
+            <div class="search-input">
+              <span class="search-input-icon"><font-awesome-icon icon="book" /></span>
+              <input v-model="filters.title" type="text" class="form-control" placeholder="Ej: Don Quijote..." />
+            </div>
+          </div>
+
+          <div class="filter-group">
+            <label class="filter-label">Autor</label>
+            <div class="search-input">
+              <span class="search-input-icon"><font-awesome-icon icon="user-edit" /></span>
+              <input v-model="filters.author" type="text" class="form-control" placeholder="Ej: Cervantes..." />
+            </div>
+          </div>
+
+          <div class="filter-group">
+            <label class="filter-label">ISBN</label>
+            <div class="search-input">
+              <span class="search-input-icon"><font-awesome-icon icon="barcode" /></span>
+              <input v-model="filters.isbn" type="text" class="form-control" placeholder="978-..." />
+            </div>
+          </div>
+
+          <!-- Selectores -->
+          <div class="filter-group">
+            <label class="filter-label">Género</label>
+            <BaseCombobox 
+              v-model="filters.genre_id"
+              :options="genres"
+              placeholder="Cualquier género"
             />
           </div>
-          <select v-model="filters.status" class="form-control" style="width:180px" @change="fetchBooks()">
-            <option value="">Todos los estados</option>
-            <option value="Disponible">Disponible</option>
-            <option value="Prestado">Prestado</option>
-            <option value="Mantenimiento">Mantenimiento</option>
-          </select>
-          <select v-model="filters.genre_id" class="form-control" style="width:160px" @change="fetchBooks()">
-            <option value="">Todos los géneros</option>
-            <option v-for="g in genres" :key="g.id" :value="g.id">{{ g.name }}</option>
-          </select>
+
+          <div class="filter-group" style="width: 200px;">
+            <label class="filter-label">Estado</label>
+            <BaseCombobox 
+              v-model="filters.status"
+              :options="bookStatuses"
+              placeholder="Cualquier estado"
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -56,7 +79,7 @@
           <font-awesome-icon icon="book" />
         </div>
         <h3>No se encontraron libros</h3>
-        <p>Agrega tu primer libro con el botón "Nuevo Libro".</p>
+        <p v-if="!auth.isLector">Agrega tu primer libro con el botón "Nuevo Libro".</p>
       </div>
 
       <div v-else class="table-wrapper">
@@ -70,7 +93,7 @@
               <th>Editorial</th>
               <th>Estado</th>
               <th>GLPI</th>
-              <th style="text-align:right">Acciones</th>
+              <th v-if="!auth.isLector" style="text-align:right">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -90,7 +113,7 @@
                 <span v-if="book.glpi_id" class="badge badge-success" :title="`GLPI ID: ${book.glpi_id}`">✓ Sync</span>
                 <span v-else class="badge badge-gray">—</span>
               </td>
-              <td>
+              <td v-if="!auth.isLector">
                 <div class="table-actions">
                   <button class="btn btn-ghost btn-icon" @click="openEdit(book)" title="Editar">
                     <font-awesome-icon icon="edit" />
@@ -118,25 +141,9 @@
         </table>
       </div>
 
-      <!-- Paginación -->
-      <div v-if="books && books.last_page > 1" class="pagination">
-        <button
-          class="btn btn-ghost btn-sm"
-          :disabled="books.current_page === 1"
-          @click="fetchBooks(books.current_page - 1)"
-        >
-          <font-awesome-icon icon="chevron-left" /> Anterior
-        </button>
-        <span style="font-size:.85rem;color:var(--c-text-secondary)">
-          Página {{ books.current_page }} de {{ books.last_page }}
-        </span>
-        <button
-          class="btn btn-ghost btn-sm"
-          :disabled="books.current_page === books.last_page"
-          @click="fetchBooks(books.current_page + 1)"
-        >
-          Siguiente <font-awesome-icon icon="chevron-right" />
-        </button>
+      <!-- Información de resultados -->
+      <div v-if="filteredBooks.length > 0" class="table-info">
+        Mostrando {{ filteredBooks.length }} libros de un total de {{ books?.total || 0 }}
       </div>
     </div>
 
@@ -179,27 +186,32 @@
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">Género</label>
-              <select v-model="modal.form.genre_id" class="form-control">
-                <option value="">Seleccione un género...</option>
-                <option v-for="g in genres" :key="g.id" :value="g.id">{{ g.name }}</option>
-              </select>
+              <BaseCombobox 
+                v-model="modal.form.genre_id"
+                :options="genres"
+                placeholder="Seleccione un género..."
+              />
             </div>
             <div class="form-group">
               <label class="form-label">Editorial</label>
-              <select v-model="modal.form.publisher_id" class="form-control">
-                <option value="">Seleccione una editorial...</option>
-                <option v-for="p in publishers" :key="p.id" :value="p.id">{{ p.name }}</option>
-              </select>
+              <BaseCombobox 
+                v-model="modal.form.publisher_id"
+                :options="publishers"
+                placeholder="Seleccione una editorial..."
+              />
             </div>
           </div>
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">Estado</label>
-              <select v-model="modal.form.status" class="form-control">
-                <option value="Disponible">Disponible</option>
-                <option value="Prestado">Prestado</option>
-                <option value="Mantenimiento">Mantenimiento</option>
-              </select>
+            <div class="form-group">
+              <label class="form-label">Estado</label>
+              <BaseCombobox 
+                v-model="modal.form.status"
+                :options="bookStatuses.filter(s => s.id !== '')"
+                placeholder="Seleccione un estado..."
+              />
+            </div>
             </div>
           </div>
           <div class="form-group">
@@ -262,11 +274,11 @@
 
           <div class="form-group">
             <label class="form-label">Prioridad *</label>
-            <select v-model="reportModal.form.priority" class="form-control">
-              <option value="Baja">Baja (Minor Issue)</option>
-              <option value="Media">Media (Standard)</option>
-              <option value="Alta">Alta (Urgent Repair)</option>
-            </select>
+            <BaseCombobox 
+              v-model="reportModal.form.priority"
+              :options="priorityOptions"
+              placeholder="Seleccione prioridad..."
+            />
           </div>
 
           <div class="form-group">
@@ -305,18 +317,32 @@ import { useBookController } from '@/controllers/bookController'
 import { glpiService } from '@/services/glpiService'
 import { useToast } from 'vue-toastification'
 import { useAuthStore } from '@/store/auth'
+import BaseCombobox from '@/components/common/BaseCombobox.vue'
 
 const toast = useToast()
 const auth = useAuthStore()
 const {
-  books, genres, publishers, loading, filters,
+  books, filteredBooks, genres, publishers, loading, filters,
   modal, deleteConfirm, reportModal,
   fetchBooks, fetchMasters, openCreate, openEdit, saveBook,
   confirmDelete, deleteBook, openReportModal, submitReport,
 } = useBookController()
 
 const syncing = ref(false)
-const searchQuery = ref('')
+const bookList = computed(() => filteredBooks.value)
+
+const bookStatuses = [
+  { id: '', name: 'Cualquier estado' },
+  { id: 'Disponible', name: 'Disponible' },
+  { id: 'Prestado', name: 'Prestado' },
+  { id: 'Mantenimiento', name: 'Mantenimiento' }
+]
+
+const priorityOptions = [
+  { id: 'Baja', name: 'Baja (Minor Issue)' },
+  { id: 'Media', name: 'Media (Standard)' },
+  { id: 'Alta', name: 'Alta (Urgent Repair)' }
+]
 
 async function handleSyncAll() {
   syncing.value = true
@@ -330,16 +356,6 @@ async function handleSyncAll() {
     syncing.value = false
     await fetchMasters() // Recargar maestros tras sync
   }
-}
-
-const bookList = computed(() => books.value?.data ?? [])
-
-let searchTimeout
-function onSearch() {
-  clearTimeout(searchTimeout)
-  searchTimeout = setTimeout(async () => {
-    await fetchBooks()
-  }, 400)
 }
 
 function handleFileChange(e) {
@@ -364,11 +380,43 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.filters-row {
-  display: flex;
+.filters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: var(--sp-4);
-  align-items: center;
-  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.filter-label {
+  font-size: .75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--c-text-muted);
+  letter-spacing: 0.5px;
+}
+
+.search-input {
+  position: relative;
+}
+
+.search-input-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--c-text-muted);
+  font-size: .9rem;
+  pointer-events: none;
+}
+
+.search-input .form-control {
+  padding-left: 36px;
 }
 
 .table-actions {
@@ -377,12 +425,14 @@ onMounted(async () => {
   justify-content: flex-end;
 }
 
-.pagination {
+.table-info {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--sp-5);
-  padding: var(--sp-4) var(--sp-6);
+  padding: var(--sp-4);
+  font-size: .82rem;
+  color: var(--c-text-muted);
+  background: var(--c-surface-1);
   border-top: 1px solid var(--c-border-light);
 }
 </style>

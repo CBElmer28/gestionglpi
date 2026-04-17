@@ -18,6 +18,10 @@ class LoanRepository implements LoanRepositoryInterface
             $query->where('status', $filters['status']);
         }
 
+        if (!empty($filters['user_id'])) {
+            $query->where('user_id', $filters['user_id']);
+        }
+
         if (!empty($filters['user_name'])) {
             $query->where('user_name', 'like', '%' . $filters['user_name'] . '%');
         }

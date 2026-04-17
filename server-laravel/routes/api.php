@@ -5,6 +5,7 @@ use App\Http\Controllers\BookController;
 use App\Http\Controllers\GlpiController;
 use App\Http\Controllers\LoanController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\RoleController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -15,7 +16,8 @@ use Illuminate\Support\Facades\Route;
 
 // ── Autenticación (pública) ──────────────────────────────────────────────
 Route::prefix('auth')->group(function () {
-    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/login',    [AuthController::class, 'login']);
+    Route::post('/register', [AuthController::class, 'register']);
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::get('/me',     [AuthController::class, 'me']);
@@ -37,6 +39,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // ── Usuarios ──────────────────────────────────────────────────────────
     Route::apiResource('users', UserController::class);
+
+    // ── Roles y Permisos ──────────────────────────────────────────────────
+    Route::get('/roles',                   [RoleController::class, 'index']);
+    Route::get('/permissions',             [RoleController::class, 'permissions']);
+    Route::post('/roles/{id}/permissions',  [RoleController::class, 'syncPermissions']);
 
     // ── GLPI ──────────────────────────────────────────────────────────────
     Route::prefix('glpi')->group(function () {

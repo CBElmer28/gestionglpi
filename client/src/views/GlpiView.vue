@@ -58,19 +58,30 @@
             <h3>Sin libros en GLPI</h3>
             <p>Los libros se sincronizan automáticamente al crearlos.</p>
           </div>
-          <div v-else class="table-wrapper">
-            <table class="table">
-              <thead><tr><th>ID GLPI</th><th>Título</th><th>Autor</th><th>ISBN</th><th>Edición</th></tr></thead>
-              <tbody>
-                <tr v-for="item in glpiBooks" :key="item.id">
-                  <td style="font-family:monospace;font-size:.8rem">#{{ item.id }}</td>
-                  <td><strong>{{ item.title || item.name || '—' }}</strong></td>
-                  <td>{{ item.author || '—' }}</td>
-                  <td style="font-family:monospace;font-size:.8rem">{{ item.isbn || '—' }}</td>
-                  <td style="font-size:.8rem;color:var(--c-text-secondary)">{{ item.edition || '—' }}</td>
-                </tr>
-              </tbody>
-            </table>
+          <div v-else class="table-container">
+            <div class="table-wrapper books-table-wrapper">
+              <table class="table">
+                <thead><tr><th>ID GLPI</th><th>Título</th><th>Autor</th><th>ISBN</th></tr></thead>
+                <tbody>
+                  <tr v-for="item in paginatedBooks" :key="item.id">
+                    <td style="font-family:monospace;font-size:.8rem">#{{ item.id }}</td>
+                    <td><strong>{{ item.title || item.name || '—' }}</strong></td>
+                    <td>{{ item.author || '—' }}</td>
+                    <td style="font-family:monospace;font-size:.8rem">{{ item.isbn || '—' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <!-- Pagination Controls -->
+            <div v-if="totalPagesBooks > 1" class="mini-pagination">
+              <button class="btn btn-ghost btn-xs" :disabled="booksPage === 1" @click="booksPage--">
+                <font-awesome-icon icon="chevron-left" />
+              </button>
+              <span>{{ booksPage }} / {{ totalPagesBooks }}</span>
+              <button class="btn btn-ghost btn-xs" :disabled="booksPage === totalPagesBooks" @click="booksPage++">
+                <font-awesome-icon icon="chevron-right" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -88,19 +99,33 @@
             <h3>Sin tickets</h3>
             <p>No se encontraron tickets en GLPI.</p>
           </div>
-          <div v-else class="table-wrapper">
-            <table class="table">
-              <thead><tr><th>ID</th><th>Nombre</th><th>Estado</th></tr></thead>
-              <tbody>
-                <tr v-for="ticket in tickets" :key="ticket.id">
-                  <td style="font-family:monospace;font-size:.8rem">{{ ticket.id }}</td>
-                  <td><strong>{{ ticket.name }}</strong></td>
-                  <td>
-                    <span class="badge badge-info">{{ ticket.status || '—' }}</span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <div v-else class="table-container">
+            <div class="table-wrapper tickets-table-wrapper">
+              <table class="table">
+                <thead><tr><th>ID</th><th>Nombre</th><th>Estado</th></tr></thead>
+                <tbody>
+                  <tr v-for="ticket in paginatedTickets" :key="ticket.id">
+                    <td style="font-family:monospace;font-size:.8rem">{{ ticket.id }}</td>
+                    <td><strong>{{ ticket.name }}</strong></td>
+                    <td>
+                      <span class="badge" :class="ticketStatus(ticket.status).class">
+                        {{ ticketStatus(ticket.status).label }}
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <!-- Pagination Controls -->
+            <div v-if="totalPagesTickets > 1" class="mini-pagination">
+              <button class="btn btn-ghost btn-xs" :disabled="ticketsPage === 1" @click="ticketsPage--">
+                <font-awesome-icon icon="chevron-left" />
+              </button>
+              <span>{{ ticketsPage }} / {{ totalPagesTickets }}</span>
+              <button class="btn btn-ghost btn-xs" :disabled="ticketsPage === totalPagesTickets" @click="ticketsPage++">
+                <font-awesome-icon icon="chevron-right" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -132,7 +157,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { glpiService } from '@/services/glpiService'
 import { useToast }    from 'vue-toastification'
 
@@ -145,7 +170,25 @@ const loadingBooks   = ref(false)
 const loadingTickets = ref(false)
 const glpiBooks      = ref([])
 const tickets        = ref([])
-const glpiUrl        = 'http://localhost:8080/api.php/v1'
+
+// Pagination States
+const booksPage      = ref(1)
+const BOOKS_PER_PAGE = 6
+const ticketsPage    = ref(1)
+const TICKETS_PER_PAGE = 6
+
+// Computed for Pagination
+const totalPagesBooks = computed(() => Math.ceil(glpiBooks.value.length / BOOKS_PER_PAGE))
+const paginatedBooks  = computed(() => {
+  const start = (booksPage.value - 1) * BOOKS_PER_PAGE
+  return glpiBooks.value.slice(start, start + BOOKS_PER_PAGE)
+})
+
+const totalPagesTickets = computed(() => Math.ceil(tickets.value.length / TICKETS_PER_PAGE))
+const paginatedTickets  = computed(() => {
+  const start = (ticketsPage.value - 1) * TICKETS_PER_PAGE
+  return tickets.value.slice(start, start + TICKETS_PER_PAGE)
+})
 
 async function handleSyncAll() {
   syncing.value = true
@@ -176,6 +219,7 @@ async function checkGlpi() {
 
 async function loadGlpiBooks() {
   loadingBooks.value = true
+  booksPage.value = 1
   try {
     const { data } = await glpiService.listBooks()
     glpiBooks.value = Array.isArray(data) ? data : []
@@ -188,6 +232,7 @@ async function loadGlpiBooks() {
 
 async function loadTickets() {
   loadingTickets.value = true
+  ticketsPage.value = 1
   try {
     const { data } = await glpiService.listTickets()
     tickets.value = Array.isArray(data) ? data : []
@@ -196,6 +241,19 @@ async function loadTickets() {
   } finally {
     loadingTickets.value = false
   }
+}
+
+function ticketStatus(status) {
+  const s = parseInt(status)
+  const map = {
+    1: { label: 'Nuevo',        class: 'badge-info' },
+    2: { label: 'Asignado',     class: 'badge-warning' },
+    3: { label: 'Planificado',  class: 'badge-warning' },
+    4: { label: 'En espera',    class: 'badge-gray' },
+    5: { label: 'Resuelto',     class: 'badge-success' },
+    6: { label: 'Cerrado',      class: 'badge-gray' },
+  }
+  return map[s] || { label: 'Enviado', class: 'badge-info' }
 }
 
 onMounted(async () => {
@@ -209,6 +267,41 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--sp-6);
+}
+
+.table-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* Alturas fijas para mantener consistencia visual (ajustado a 6 filas) */
+.books-table-wrapper {
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+}
+
+.tickets-table-wrapper {
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+}
+
+.table-wrapper {
+  flex: 1;
+}
+
+.mini-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-4);
+  padding: var(--sp-3);
+  border-top: 1px solid var(--c-border-light);
+  font-size: .8rem;
+  color: var(--c-text-secondary);
+  height: 45px; /* Altura fija para el control */
 }
 
 .glpi-config-info {

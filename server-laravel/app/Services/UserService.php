@@ -32,10 +32,10 @@ class UserService
             'name'     => $data['name'],
             'email'    => $data['email'],
             'password' => Hash::make($data['password']),
-            'role'     => $data['role'] ?? 'lector',
+            'role_id'  => $data['role_id'] ?? null,
         ]);
 
-        return ['success' => true, 'user' => $user];
+        return ['success' => true, 'user' => $user->load('role')];
     }
 
     public function update(int $id, array $data): User
@@ -44,7 +44,8 @@ class UserService
             $data['password'] = Hash::make($data['password']);
         }
 
-        return $this->userRepository->update($id, $data);
+        $user = $this->userRepository->update($id, $data);
+        return $user->load('role');
     }
 
     public function delete(int $id): bool

@@ -31,7 +31,7 @@ class UserController extends Controller
             'name'     => 'required|string|max:255',
             'email'    => 'required|email|unique:users,email',
             'password' => 'required|string|min:6|confirmed',
-            'role'     => 'nullable|in:admin,bibliotecario,lector',
+            'role_id'  => 'nullable|exists:roles,id',
         ]);
 
         if ($validator->fails()) {
@@ -53,7 +53,7 @@ class UserController extends Controller
             'name'     => 'sometimes|string|max:255',
             'email'    => "sometimes|email|unique:users,email,{$id}",
             'password' => 'sometimes|string|min:6|confirmed',
-            'role'     => 'sometimes|in:admin,bibliotecario,lector',
+            'role_id'  => 'sometimes|exists:roles,id',
         ]);
 
         if ($validator->fails()) {

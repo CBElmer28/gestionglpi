@@ -43,11 +43,38 @@ class AuthController extends Controller
     public function me(Request $request): JsonResponse
     {
         $user = $request->user();
+        $user->load('role.permissions');
+        
         return response()->json([
-            'id'    => $user->id,
-            'name'  => $user->name,
-            'email' => $user->email,
-            'role'  => $user->role,
+            'id'          => $user->id,
+            'name'        => $user->name,
+            'email'       => $user->email,
+            'role'        => $user->role?->slug ?? $user->role,
+            'permissions' => $user->role ? $user->role->permissions->pluck('slug')->toArray() : [],
         ]);
+    }
+
+    public function register(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'name'     => ['required', 'string', 'max:255', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/'],
+            'email'    => 'required|email|max:255|unique:users,email',
+            'password' => 'required|string|min:6|confirmed',
+        ], [
+            'name.regex' => 'El nombre solo puede contener letras y espacios.',
+            'password.min' => 'La contraseña debe tener al menos 6 caracteres.',
+            'email.unique' => 'Este correo ya está registrado.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $result = $this->authService->register($request->only(['name', 'email', 'password']));
+
+        return response()->json([
+            'token' => $result['token'],
+            'user'  => $result['user'],
+        ], 201);
     }
 }

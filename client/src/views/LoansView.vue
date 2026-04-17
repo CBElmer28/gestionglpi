@@ -2,32 +2,33 @@
   <div>
     <div class="page-header">
       <div class="page-header-info">
-        <h1><font-awesome-icon icon="clipboard-list" /> Gestión de Préstamos</h1>
-        <p>Registra y controla el ciclo de vida de los préstamos.</p>
+        <h1><font-awesome-icon icon="clipboard-list" /> {{ isLectorMode ? 'Mis Préstamos' : 'Gestión de Préstamos' }}</h1>
+        <p>{{ isLectorMode ? 'Consulta tus libros activos y reporta incidencias.' : 'Registra y controla el ciclo de vida de los préstamos.' }}</p>
       </div>
-      <button id="btn-new-loan" class="btn btn-primary" @click="openCreate">
+      <button v-if="auth.can('loans.manage')" id="btn-new-loan" class="btn btn-primary" @click="handleOpenCreate">
         <font-awesome-icon icon="plus" /> Nuevo Préstamo
       </button>
     </div>
 
     <!-- Filtros -->
-    <div class="card" style="margin-bottom:var(--sp-5)">
+    <div class="card overflow-visible" style="margin-bottom:var(--sp-5)">
       <div class="card-body" style="padding:var(--sp-4)">
         <div class="filters-row">
-          <select v-model="filters.status" class="form-control" style="width:200px" @change="fetchLoans()">
-            <option value="">Todos los estados</option>
-            <option value="Activo">Activo</option>
-            <option value="Devuelto">Devuelto</option>
-            <option value="Atrasado">Atrasado</option>
-          </select>
-          <div class="search-bar" style="flex:1">
+          <BaseCombobox 
+            v-model="filters.status"
+            :options="loanStatuses"
+            placeholder="Todos los estados"
+            style="width:200px"
+            @change="fetchLoans(1, lectorParams)"
+          />
+          <div v-if="!isLectorMode" class="search-bar" style="flex:1">
             <span class="search-bar-icon"><font-awesome-icon icon="search" /></span>
             <input
               v-model="filters.user_name"
               type="text"
               class="form-control"
               placeholder="Buscar por nombre de usuario…"
-              @input="fetchLoans()"
+              @input="fetchLoans(1, lectorParams)"
             />
           </div>
         </div>
@@ -53,7 +54,7 @@
             <tr>
               <th>#</th>
               <th>Libro</th>
-              <th>Usuario</th>
+              <th v-if="!isLectorMode">Usuario</th>
               <th>Fecha Préstamo</th>
               <th>Fecha Devolución</th>
               <th>Estado</th>
@@ -64,7 +65,7 @@
             <tr v-for="loan in loanList" :key="loan.id">
               <td style="color:var(--c-text-muted);font-size:.8rem">{{ loan.id }}</td>
               <td><strong>{{ loan.book?.title || '—' }}</strong></td>
-              <td>{{ loan.user_name }}</td>
+              <td v-if="!isLectorMode">{{ loan.user_name }}</td>
               <td>{{ formatDate(loan.loan_date) }}</td>
               <td>{{ loan.return_date ? formatDate(loan.return_date) : '—' }}</td>
               <td>
@@ -72,8 +73,18 @@
               </td>
               <td>
                 <div style="display:flex;gap:4px;justify-content:flex-end">
+                  <!-- Botón Reportar -->
                   <button
-                    v-if="loan.status === 'Activo'"
+                    v-if="auth.can('incidents.report') && (loan.status === 'Activo' || loan.status === 'Atrasado')"
+                    class="btn btn-ghost btn-sm text-warning"
+                    @click="openReportModal(loan)"
+                    title="Reportar Problema"
+                  >
+                    <font-awesome-icon icon="exclamation-triangle" /> Reportar
+                  </button>
+
+                  <button
+                    v-if="auth.can('loans.manage') && loan.status === 'Activo'"
                     class="btn btn-ghost btn-sm"
                     @click="confirmReturn(loan)"
                     title="Registrar devolución"
@@ -89,11 +100,11 @@
 
       <!-- Paginación -->
       <div v-if="loans && loans.last_page > 1" class="pagination">
-        <button class="btn btn-ghost btn-sm" :disabled="loans.current_page === 1" @click="fetchLoans(loans.current_page - 1)">
+        <button class="btn btn-ghost btn-sm" :disabled="loans.current_page === 1" @click="fetchLoans(loans.current_page - 1, lectorParams)">
           <font-awesome-icon icon="chevron-left" /> Anterior
         </button>
         <span style="font-size:.85rem;color:var(--c-text-secondary)">Página {{ loans.current_page }} de {{ loans.last_page }}</span>
-        <button class="btn btn-ghost btn-sm" :disabled="loans.current_page === loans.last_page" @click="fetchLoans(loans.current_page + 1)">
+        <button class="btn btn-ghost btn-sm" :disabled="loans.current_page === loans.last_page" @click="fetchLoans(loans.current_page + 1, lectorParams)">
           Siguiente <font-awesome-icon icon="chevron-right" />
         </button>
       </div>
@@ -113,25 +124,38 @@
         <div class="modal-body">
           <div class="form-group">
             <label class="form-label">Libro *</label>
-            <select v-model="modal.form.book_id" class="form-control">
-              <option value="">Seleccionar libro…</option>
-              <option v-for="b in books" :key="b.id" :value="b.id">{{ b.title }} — {{ b.author }}</option>
-            </select>
+            <BaseCombobox 
+              v-model="modal.form.book_id"
+              :options="books"
+              label-key="title"
+              sub-label-key="author"
+              placeholder="Buscar libro por título o autor..."
+              :has-error="!!modal.errors.book_id"
+            />
             <span v-if="modal.errors.book_id" class="form-error">{{ modal.errors.book_id[0] }}</span>
           </div>
           <div class="form-group">
             <label class="form-label">Nombre del usuario *</label>
-            <input v-model="modal.form.user_name" type="text" class="form-control" placeholder="Nombre del alumno o lector" />
+            <BaseCombobox 
+              v-model="modal.form.user_name"
+              :options="lectors"
+              label-key="name"
+              sub-label-key="email"
+              value-key="name"
+              placeholder="Buscar lector por nombre o correo..."
+              :has-error="!!modal.errors.user_name"
+              @change="(u) => modal.form.user_id = u.id"
+            />
             <span v-if="modal.errors.user_name" class="form-error">{{ modal.errors.user_name[0] }}</span>
           </div>
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">Fecha de Préstamo</label>
-              <input v-model="modal.form.loan_date" type="date" class="form-control" />
+              <input v-model="modal.form.loan_date" type="date" class="form-control" :min="today" @input="updateReturnDate" />
             </div>
             <div class="form-group">
-              <label class="form-label">Fecha de Devolución</label>
-              <input v-model="modal.form.return_date" type="date" class="form-control" />
+              <label class="form-label">Fecha de Devolución (Plazo 7 días)</label>
+              <input v-model="modal.form.return_date" type="date" class="form-control readonly-input" readonly />
             </div>
           </div>
         </div>
@@ -140,6 +164,59 @@
           <button id="btn-save-loan" class="btn btn-primary" @click="createLoan" :disabled="modal.submitting">
             <span v-if="modal.submitting" class="spinner"></span>
             <span v-else>Registrar Préstamo</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Reportar Incidencia -->
+    <div v-if="reportModal.visible" class="modal-backdrop" @click.self="reportModal.visible = false">
+      <div id="modal-report" class="modal" style="max-width:500px">
+        <div class="modal-header">
+          <h3 class="modal-title">
+            <font-awesome-icon icon="exclamation-triangle" /> Reportar Incidencia
+          </h3>
+          <button class="btn btn-ghost btn-icon" @click="reportModal.visible = false">
+            <font-awesome-icon icon="times" />
+          </button>
+        </div>
+        <div class="modal-body">
+          <div v-if="reportModal.loan" style="margin-bottom:var(--sp-4);padding:var(--sp-3);background:var(--c-bg-page);border-radius:var(--radius-sm)">
+             <div style="font-weight:600;font-size:.9rem">{{ reportModal.loan.book?.title }}</div>
+             <div style="font-size:.8rem;color:var(--c-text-secondary)">{{ reportModal.loan.book?.author }}</div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Prioridad *</label>
+            <BaseCombobox 
+              v-model="reportModal.form.priority"
+              :options="priorityOptions"
+              placeholder="Seleccione prioridad..."
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Descripción del problema *</label>
+            <textarea
+              v-model="reportModal.form.description"
+              class="form-control"
+              rows="4"
+              placeholder="Ej: El libro tiene varias hojas sueltas y la portada dañada..."
+            ></textarea>
+            <span v-if="reportModal.errors.description" class="form-error">{{ reportModal.errors.description[0] }}</span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Evidencia Fotográfica (Opcional)</label>
+            <input type="file" @change="handleFileChange" accept="image/jpeg,image/png,image/webp" class="form-control" />
+            <span v-if="reportModal.errors.image" class="form-error">{{ reportModal.errors.image[0] }}</span>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" @click="reportModal.visible = false">Cancelar</button>
+          <button class="btn btn-warning" @click="submitReport" :disabled="reportModal.submitting">
+            <span v-if="reportModal.submitting" class="spinner"></span>
+            <span v-else>Enviar a GLPI</span>
           </button>
         </div>
       </div>
@@ -169,15 +246,54 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useLoanController } from '@/controllers/loanController'
+import { useAuthStore } from '@/store/auth'
+import BaseCombobox from '@/components/common/BaseCombobox.vue'
 
+const auth = useAuthStore()
 const {
-  loans, books, loading, filters, modal, returnConfirm,
-  fetchLoans, openCreate, createLoan, confirmReturn, returnLoan,
+  loans, books, lectors, loading, filters, modal, returnConfirm, reportModal,
+  fetchLoans, openCreate, createLoan, confirmReturn, returnLoan, 
+  openReportModal, submitReport
 } = useLoanController()
 
+const loanStatuses = [
+  { id: '', name: 'Todos los estados' },
+  { id: 'Activo', name: 'Activo' },
+  { id: 'Devuelto', name: 'Devuelto' },
+  { id: 'Atrasado', name: 'Atrasado' }
+]
+
+const priorityOptions = [
+  { id: 'Baja', name: 'Baja (Minor Issue)' },
+  { id: 'Media', name: 'Media (Standard)' },
+  { id: 'Alta', name: 'Alta (Urgent Repair)' }
+]
+
+// Reseteamos el buscador local al abrir el modal
+const originalOpenCreate = openCreate
+const today = new Date().toISOString().split('T')[0]
+
+function handleOpenCreate() {
+  originalOpenCreate()
+  updateReturnDate()
+}
+
+function updateReturnDate() {
+  const val = modal.form.loan_date
+  if (val) {
+    const d = new Date(val + 'T12:00:00')
+    d.setDate(d.getDate() + 7)
+    modal.form.return_date = d.toISOString().split('T')[0]
+  }
+}
+
+
 const loanList = computed(() => loans.value?.data ?? [])
+// Si NO tiene permiso para ver todos, asumimos que solo ve los suyos
+const isLectorMode = computed(() => !auth.can('loans.view_all'))
+const lectorParams = computed(() => isLectorMode.value ? { user_id: auth.user?.id } : {})
 
 function formatDate(d) {
   if (!d) return '—'
@@ -188,10 +304,24 @@ function statusBadge(s) {
   return { 'Activo': 'badge-info', 'Devuelto': 'badge-success', 'Atrasado': 'badge-danger' }[s] || 'badge-gray'
 }
 
-onMounted(() => fetchLoans())
+function handleFileChange(e) {
+  const file = e.target.files[0]
+  if (file) {
+    reportModal.form.image = file
+  }
+}
+
+onMounted(() => fetchLoans(1, lectorParams.value))
 </script>
 
 <style scoped>
 .filters-row { display: flex; gap: var(--sp-4); align-items: center; flex-wrap: wrap; }
 .pagination  { display: flex; align-items: center; justify-content: center; gap: var(--sp-5); padding: var(--sp-4) var(--sp-6); border-top: 1px solid var(--c-border-light); }
+.text-warning { color: var(--c-warning) !important; }
+.readonly-input {
+  background-color: var(--c-primary-50) !important;
+  cursor: not-allowed;
+  opacity: 0.8;
+  border-style: dashed;
+}
 </style>

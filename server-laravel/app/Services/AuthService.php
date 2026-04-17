@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Repositories\Contracts\UserRepositoryInterface;
 use Illuminate\Support\Facades\Hash;
 
+use App\Models\Role;
+
 class AuthService
 {
     public function __construct(
@@ -22,19 +24,24 @@ class AuthService
             return ['success' => false, 'message' => 'Credenciales inválidas.'];
         }
 
-        // Revocar tokens anteriores (sesión única)
+        // Cargar rol y permisos
+        $user->load('role.permissions');
+        $permissionSlugs = $user->role ? $user->role->permissions->pluck('slug')->toArray() : [];
+
+        // Revocar tokens anteriores
         $user->tokens()->delete();
 
-        $token = $user->createToken('biblioteca-token', [$user->role])->plainTextToken;
+        $token = $user->createToken('biblioteca-token', $permissionSlugs ?: [$user->role?->slug ?? 'guest'])->plainTextToken;
 
         return [
             'success' => true,
             'token'   => $token,
             'user'    => [
-                'id'    => $user->id,
-                'name'  => $user->name,
-                'email' => $user->email,
-                'role'  => $user->role,
+                'id'          => $user->id,
+                'name'        => $user->name,
+                'email'       => $user->email,
+                'role'        => $user->role?->slug ?? $user->role, // Fallback
+                'permissions' => $permissionSlugs,
             ],
         ];
     }
@@ -45,5 +52,35 @@ class AuthService
     public function logout($user): void
     {
         $user->tokens()->delete();
+    }
+
+    /**
+     * Registra un nuevo lector y devuelve un token Sanctum.
+     */
+    public function register(array $data): array
+    {
+        $lectorRole = Role::where('slug', 'lector')->first();
+        
+        $data['password'] = Hash::make($data['password']);
+        $data['role']     = 'lector';
+        $data['role_id']  = $lectorRole?->id;
+
+        $user = $this->userRepository->create($data);
+        $user->load('role.permissions');
+        $permissionSlugs = $user->role ? $user->role->permissions->pluck('slug')->toArray() : [];
+        
+        $token = $user->createToken('biblioteca-token', $permissionSlugs ?: ['lector'])->plainTextToken;
+
+        return [
+            'success' => true,
+            'token'   => $token,
+            'user'    => [
+                'id'          => $user->id,
+                'name'        => $user->name,
+                'email'       => $user->email,
+                'role'        => 'lector',
+                'permissions' => $permissionSlugs,
+            ],
+        ];
     }
 }

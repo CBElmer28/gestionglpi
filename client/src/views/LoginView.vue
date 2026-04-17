@@ -97,10 +97,21 @@
             <strong>Demo:</strong> admin@biblioteca.com / admin123
           </div>
         </form>
+
+        <div class="login-form-footer">
+          ¿Aún no tienes cuenta? 
+          <button @click="isRegisterModalOpen = true" class="btn-link-primary">Regístrate</button>
+        </div>
       </div>
 
       <p class="login-footer-text">Sistema de Gestión de Biblioteca © {{ year }}</p>
     </div>
+
+    <!-- Modal de Registro -->
+    <RegisterModal 
+      :is-open="isRegisterModalOpen" 
+      @close="isRegisterModalOpen = false" 
+    />
   </div>
 </template>
 
@@ -108,6 +119,7 @@
 import { reactive, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/store/auth'
+import RegisterModal from '@/components/auth/RegisterModal.vue'
 
 const router = useRouter()
 const route  = useRoute()
@@ -118,6 +130,7 @@ const errors = reactive({ email: '', password: '' })
 const serverError = ref('')
 const loading     = ref(false)
 const showPassword = ref(false)
+const isRegisterModalOpen = ref(false)
 const year = new Date().getFullYear()
 
 async function handleLogin() {
@@ -229,6 +242,32 @@ async function handleLogin() {
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-xl);
   padding: var(--sp-8);
+}
+
+.login-form-footer {
+  margin-top: var(--sp-8);
+  text-align: center;
+  font-size: .9rem;
+  color: var(--c-text-secondary);
+  border-top: 1px solid var(--c-border);
+  padding-top: var(--sp-6);
+}
+
+.btn-link-primary {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--c-primary);
+  font-weight: 600;
+  font-size: .9rem;
+  cursor: pointer;
+  transition: color var(--tr-fast);
+  font-family: inherit;
+}
+
+.btn-link-primary:hover {
+  color: var(--c-primary-600);
+  text-decoration: underline;
 }
 
 .login-form-header {

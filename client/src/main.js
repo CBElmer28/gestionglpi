@@ -28,6 +28,8 @@ import {
   faTimes,
   faChevronLeft,
   faChevronRight,
+  faChevronUp,
+  faChevronDown,
   faReply,
   faExclamationTriangle,
   faExclamationCircle,
@@ -45,7 +47,15 @@ import {
   faLock,
   faEye,
   faEyeSlash,
-  faBuilding
+  faBuilding,
+  faUser,
+  faUserPlus,
+  faInfoCircle,
+  faHome,
+  faBookOpen,
+  faShieldAlt,
+  faUserEdit,
+  faBarcode
 } from '@fortawesome/free-solid-svg-icons'
 
 library.add(
@@ -66,6 +76,8 @@ library.add(
   faTimes,
   faChevronLeft,
   faChevronRight,
+  faChevronUp,
+  faChevronDown,
   faReply,
   faExclamationTriangle,
   faExclamationCircle,
@@ -83,7 +95,15 @@ library.add(
   faLock,
   faEye,
   faEyeSlash,
-  faBuilding
+  faBuilding,
+  faUser,
+  faUserPlus,
+  faInfoCircle,
+  faHome,
+  faBookOpen,
+  faShieldAlt,
+  faUserEdit,
+  faBarcode
 )
 
 const app   = createApp(App)

@@ -15,6 +15,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'role_id',
         'role',
         'glpi_user_id',
     ];
@@ -30,16 +31,33 @@ class User extends Authenticatable
     ];
 
     /**
+     * Relación con el Rol.
+     */
+    public function role()
+    {
+        return $this->belongsTo(Role::class);
+    }
+
+    /**
+     * Comprueba si el usuario tiene un permiso determinado.
+     */
+    public function hasPermission(string $permissionSlug): bool
+    {
+        if (!$this->role) return false;
+        return $this->role->permissions()->where('slug', $permissionSlug)->exists();
+    }
+
+    /**
      * Comprueba si el usuario tiene un rol determinado.
      */
-    public function hasRole(string $role): bool
+    public function hasRole(string $roleSlug): bool
     {
-        return $this->role === $role;
+        return $this->role?->slug === $roleSlug || $this->role === $roleSlug;
     }
 
     public function isAdmin(): bool
     {
-        return $this->role === 'admin';
+        return $this->hasRole('admin');
     }
 }
 

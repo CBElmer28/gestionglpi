@@ -37,7 +37,13 @@ class BookRepository implements BookRepositoryInterface
             });
         }
 
-        return $query->orderBy('title')->paginate(15);
+        $perPage = $filters['per_page'] ?? 15;
+
+        if ($perPage === 'all') {
+            return $query->orderBy('title')->paginate(5000); // "All" effectively
+        }
+
+        return $query->orderBy('title')->paginate($perPage);
     }
 
     public function find(int $id): ?Book

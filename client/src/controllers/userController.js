@@ -1,10 +1,12 @@
 import { ref, reactive } from 'vue'
 import { userRepository } from '@/repositories/userRepository'
-import { useToast } from 'vue-toastification'
+import { roleService }    from '@/services/roleService'
+import { useToast }       from 'vue-toastification'
 
 export function useUserController() {
   const toast   = useToast()
   const users   = ref([])
+  const roles   = ref([])
   const loading = ref(false)
 
   const modal = reactive({
@@ -12,7 +14,7 @@ export function useUserController() {
     type:        'create',
     form: {
       id: null, name: '', email: '', password: '',
-      password_confirmation: '', role: 'lector',
+      password_confirmation: '', role_id: null,
     },
     errors:      {},
     submitting:  false,
@@ -31,12 +33,21 @@ export function useUserController() {
     }
   }
 
+  async function fetchRoles() {
+    try {
+      const { data } = await roleService.getAll()
+      roles.value = data
+    } catch {
+      toast.error('Error al cargar los roles.')
+    }
+  }
+
   function openCreate() {
     modal.type    = 'create'
     modal.errors  = {}
     modal.form    = {
       id: null, name: '', email: '', password: '',
-      password_confirmation: '', role: 'lector',
+      password_confirmation: '', role_id: roles.value.find(r => r.slug === 'lector')?.id || null,
     }
     modal.visible = true
   }
@@ -50,7 +61,7 @@ export function useUserController() {
       email:                 user.email,
       password:              '',
       password_confirmation: '',
-      role:                  user.role,
+      role_id:               user.role_id,
     }
     modal.visible = true
   }
@@ -60,7 +71,6 @@ export function useUserController() {
     modal.submitting = true
     try {
       const payload = { ...modal.form }
-      // No enviar password vacío en edición
       if (modal.type === 'edit' && !payload.password) {
         delete payload.password
         delete payload.password_confirmation
@@ -104,7 +114,7 @@ export function useUserController() {
   }
 
   return {
-    users, loading, modal, deleteConfirm,
-    fetchUsers, openCreate, openEdit, save, confirmDelete, deleteUser,
+    users, roles, loading, modal, deleteConfirm,
+    fetchUsers, fetchRoles, openCreate, openEdit, save, confirmDelete, deleteUser,
   }
 }

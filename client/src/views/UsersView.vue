@@ -5,9 +5,14 @@
         <h1><font-awesome-icon icon="users" /> Usuarios del Sistema</h1>
         <p>Gestiona los usuarios y sus roles de acceso.</p>
       </div>
-      <button id="btn-new-user" class="btn btn-primary" @click="openCreate">
-        <font-awesome-icon icon="plus" /> Nuevo Usuario
-      </button>
+      <div style="display:flex; gap: var(--sp-3)">
+        <button class="btn btn-ghost" @click="permModalVisible = true">
+          <font-awesome-icon icon="shield-alt" /> Gestionar Permisos
+        </button>
+        <button id="btn-new-user" class="btn btn-primary" @click="openCreate">
+          <font-awesome-icon icon="plus" /> Nuevo Usuario
+        </button>
+      </div>
     </div>
 
     <div class="card">
@@ -31,14 +36,16 @@
               <td><strong>{{ user.name }}</strong></td>
               <td style="font-size:.875rem">{{ user.email }}</td>
               <td>
-                <span class="badge" :class="roleBadge(user.role)">{{ roleLabel(user.role) }}</span>
+                <span class="badge" :class="roleBadge(user.role?.slug)">
+                  {{ user.role?.name || 'Sin Rol' }}
+                </span>
               </td>
               <td>
                 <div style="display:flex;gap:4px;justify-content:flex-end">
-                  <button class="btn btn-ghost btn-icon" @click="openEdit(user)">
+                  <button class="btn btn-ghost btn-icon" @click="openEdit(user)" title="Editar usuario">
                     <font-awesome-icon icon="edit" />
                   </button>
-                  <button class="btn btn-ghost btn-icon" @click="confirmDelete(user)">
+                  <button class="btn btn-ghost btn-icon" @click="confirmDelete(user)" title="Eliminar usuario">
                     <font-awesome-icon icon="trash-alt" />
                   </button>
                 </div>
@@ -70,11 +77,11 @@
             </div>
             <div class="form-group">
               <label class="form-label">Rol *</label>
-              <select v-model="modal.form.role" class="form-control">
-                <option value="admin">Administrador</option>
-                <option value="bibliotecario">Bibliotecario</option>
-                <option value="lector">Lector</option>
-              </select>
+              <BaseCombobox 
+                v-model="modal.form.role_id"
+                :options="roles"
+                placeholder="Seleccione un rol..."
+              />
             </div>
           </div>
           <div class="form-group">
@@ -82,9 +89,12 @@
             <input v-model="modal.form.email" type="email" class="form-control" placeholder="usuario@ejemplo.com" />
             <span v-if="modal.errors.email" class="form-error">{{ modal.errors.email[0] }}</span>
           </div>
+          <p v-if="modal.type === 'edit'" style="margin-bottom:var(--sp-4); font-size:0.85rem; color:var(--c-text-muted)">
+            <strong>Opcional:</strong> deje los campos de contraseña en blanco si no desea realizar cambios.
+          </p>
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label">Contraseña {{ modal.type === 'edit' ? '(dejar en blanco para no cambiar)' : '*' }}</label>
+              <label class="form-label">Contraseña {{ modal.type === 'create' ? '*' : '' }}</label>
               <input v-model="modal.form.password" type="password" class="form-control" placeholder="••••••••" />
               <span v-if="modal.errors.password" class="form-error">{{ modal.errors.password[0] }}</span>
             </div>
@@ -124,20 +134,38 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal de Permisos -->
+    <PermissionModal 
+      :visible="permModalVisible" 
+      @close="permModalVisible = false" 
+    />
   </div>
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useUserController } from '@/controllers/userController'
+import PermissionModal from '@/components/users/PermissionModal.vue'
+import BaseCombobox from '@/components/common/BaseCombobox.vue'
 
 const {
-  users, loading, modal, deleteConfirm,
-  fetchUsers, openCreate, openEdit, save, confirmDelete, deleteUser,
+  users, roles, loading, modal, deleteConfirm,
+  fetchUsers, fetchRoles, openCreate, openEdit, save, confirmDelete, deleteUser,
 } = useUserController()
 
-const roleLabel = (r) => ({ admin: 'Admin', bibliotecario: 'Bibliotecario', lector: 'Lector' }[r] || r)
-const roleBadge = (r) => ({ admin: 'badge-danger', bibliotecario: 'badge-info', lector: 'badge-gray' }[r] || 'badge-gray')
+const permModalVisible = ref(false)
 
-onMounted(() => fetchUsers())
+const roleBadge = (slug) => ({
+  admin: 'badge-danger',
+  bibliotecario: 'badge-info',
+  lector: 'badge-gray'
+}[slug] || 'badge-gray')
+
+onMounted(async () => {
+  await Promise.all([
+    fetchUsers(),
+    fetchRoles()
+  ])
+})
 </script>

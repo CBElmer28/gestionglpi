@@ -356,8 +356,8 @@ h4 { font-size: 1.1rem; }
   padding: var(--sp-5) var(--sp-6);
   box-shadow: var(--shadow-sm);
   display: flex;
-  align-items: flex-start;
-  gap: var(--sp-4);
+  align-items: center;
+  gap: var(--sp-5);
   transition: all var(--tr-base);
   position: relative;
   overflow: hidden;
@@ -759,6 +759,12 @@ select.form-control { cursor: pointer; }
   border-radius: var(--radius-sm);
 }
 @keyframes skeleton { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+.overflow-visible { 
+  overflow: visible !important; 
+  position: relative;
+  z-index: 10;
+}
 
 /* ── Responsive ── */
 @media (max-width: 768px) {

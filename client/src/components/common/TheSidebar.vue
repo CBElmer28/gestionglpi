@@ -15,7 +15,7 @@
 
       <RouterLink
         v-for="item in mainItems"
-        :key="item.name"
+        :key="item.route"
         :to="item.route"
         class="sidebar-item"
         :class="{ active: currentRoute === item.route }"
@@ -26,30 +26,33 @@
         {{ item.label }}
       </RouterLink>
 
-      <span class="sidebar-section-title">Administración</span>
+      <div v-if="auth.can('users.manage') || auth.can('glpi.manage')">
+        <span class="sidebar-section-title">Administración</span>
 
-      <RouterLink
-        v-if="auth.isAdmin"
-        to="/users"
-        class="sidebar-item"
-        :class="{ active: currentRoute === '/users' }"
-      >
-        <span class="sidebar-item-icon">
-          <font-awesome-icon icon="users" />
-        </span>
-        Usuarios
-      </RouterLink>
+        <RouterLink
+          v-if="auth.can('users.manage')"
+          to="/users"
+          class="sidebar-item"
+          :class="{ active: currentRoute === '/users' }"
+        >
+          <span class="sidebar-item-icon">
+            <font-awesome-icon icon="users" />
+          </span>
+          Usuarios
+        </RouterLink>
 
-      <RouterLink
-        to="/glpi"
-        class="sidebar-item"
-        :class="{ active: currentRoute === '/glpi' }"
-      >
-        <span class="sidebar-item-icon">
-          <font-awesome-icon icon="link" />
-        </span>
-        GLPI
-      </RouterLink>
+        <RouterLink
+          v-if="auth.can('glpi.manage')"
+          to="/glpi"
+          class="sidebar-item"
+          :class="{ active: currentRoute === '/glpi' }"
+        >
+          <span class="sidebar-item-icon">
+            <font-awesome-icon icon="link" />
+          </span>
+          GLPI
+        </RouterLink>
+      </div>
     </nav>
 
     <div class="sidebar-footer">
@@ -71,18 +74,24 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/store/auth'
+import Swal from 'sweetalert2'
 
 const auth   = useAuthStore()
 const route  = useRoute()
 const router = useRouter()
 
-const mainItems = [
-  { icon: 'chart-line',     label: 'Dashboard',   route: '/dashboard' },
-  { icon: 'book',           label: 'Libros',      route: '/books' },
-  { icon: 'tags',           label: 'Géneros',     route: '/genres' },
-  { icon: 'building',       label: 'Editoriales', route: '/publishers' },
-  { icon: 'clipboard-list', label: 'Préstamos',   route: '/loans' },
-]
+const mainItems = computed(() => {
+  const items = [
+    { icon: 'chart-line',     label: 'Dashboard',   route: '/dashboard' },
+    { icon: 'book',           label: 'Libros',      route: '/books',      permission: 'books.view' },
+    { icon: 'tags',           label: 'Géneros',     route: '/genres',     permission: 'catalog.manage' },
+    { icon: 'building',       label: 'Editoriales', route: '/publishers', permission: 'catalog.manage' },
+    { icon: 'clipboard-list', label: 'Préstamos',   route: '/loans',     permission: 'loans.view_own' },
+  ]
+
+  // Filtramos por permisos
+  return items.filter(i => !i.permission || auth.can(i.permission))
+})
 
 const currentRoute = computed(() => route.path)
 
@@ -92,12 +101,26 @@ const userInitial = computed(() =>
 
 const roleName = computed(() => {
   const map = { admin: 'Administrador', bibliotecario: 'Bibliotecario', lector: 'Lector' }
-  return map[auth.user?.role] || auth.user?.role
+  const slug = auth.user?.role?.slug || auth.user?.role // Fallback a legacy si existe
+  return map[slug] || slug || 'Usuario'
 })
 
 async function handleLogout() {
-  await auth.logout()
-  router.push({ name: 'login' })
+  const result = await Swal.fire({
+    title: '¿Cerrar sesión?',
+    text: '¿Estás seguro de que deseas salir del sistema?',
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'Sí, salir',
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: 'var(--c-primary-600)',
+    reverseButtons: true
+  })
+
+  if (result.isConfirmed) {
+    await auth.logout()
+    router.push({ name: 'login' })
+  }
 }
 </script>
 

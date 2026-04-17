@@ -3,30 +3,44 @@ import { ref, computed } from 'vue'
 import { authService } from '@/services/authService'
 
 export const useAuthStore = defineStore('auth', () => {
+  const user = ref(JSON.parse(localStorage.getItem('biblioteca_user')) || null)
   const token = ref(localStorage.getItem('biblioteca_token') || null)
-  const user  = ref(JSON.parse(localStorage.getItem('biblioteca_user') || 'null'))
+  const permissions = ref(JSON.parse(localStorage.getItem('biblioteca_permissions')) || [])
 
   const isAuthenticated = computed(() => !!token.value)
-  const isAdmin         = computed(() => user.value?.role === 'admin')
-  const isBibliotecario = computed(() => ['admin', 'bibliotecario'].includes(user.value?.role))
+  const isAdmin = computed(() => user.value?.role?.slug === 'admin')
+  const isLector = computed(() => user.value?.role?.slug === 'lector')
 
-  function setSession(t, u) {
+  // Helper para verificar permisos dinámicos
+  const can = (p) => permissions.value.includes(p)
+
+  function setSession(u, t, p = []) {
+    user.value = u
     token.value = t
-    user.value  = u
-    localStorage.setItem('biblioteca_token', t)
+    permissions.value = p
     localStorage.setItem('biblioteca_user', JSON.stringify(u))
+    localStorage.setItem('biblioteca_token', t)
+    localStorage.setItem('biblioteca_permissions', JSON.stringify(p))
   }
 
   function clearSession() {
+    user.value = null
     token.value = null
-    user.value  = null
-    localStorage.removeItem('biblioteca_token')
+    permissions.value = []
     localStorage.removeItem('biblioteca_user')
+    localStorage.removeItem('biblioteca_token')
+    localStorage.removeItem('biblioteca_permissions')
   }
 
   async function login(credentials) {
     const { data } = await authService.login(credentials)
-    setSession(data.token, data.user)
+    setSession(data.user, data.token, data.user.permissions || [])
+    return data.user
+  }
+
+  async function register(userData) {
+    const { data } = await authService.register(userData)
+    setSession(data.user, data.token, data.user.permissions || [])
     return data.user
   }
 
@@ -39,14 +53,17 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function fetchMe() {
-    const { data } = await authService.me()
-    user.value = data
-    localStorage.setItem('biblioteca_user', JSON.stringify(data))
+    try {
+      const { data } = await authService.me()
+      setSession(data, token.value, data.permissions || [])
+    } catch {
+      clearSession()
+    }
   }
 
   return {
-    token, user,
-    isAuthenticated, isAdmin, isBibliotecario,
-    setSession, clearSession, login, logout, fetchMe,
+    user, token, permissions,
+    isAuthenticated, isAdmin, isLector, can,
+    login, register, logout, fetchMe
   }
 })

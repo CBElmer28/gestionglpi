@@ -16,6 +16,7 @@ class Loan extends Model
 
     protected $fillable = [
         'book_id',
+        'user_id',
         'user_name',
         'loan_date',
         'return_date',
@@ -30,5 +31,10 @@ class Loan extends Model
     public function book(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Book::class, 'book_id');
+    }
+
+    public function user(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
     }
 }

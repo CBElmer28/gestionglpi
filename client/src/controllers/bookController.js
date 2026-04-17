@@ -11,7 +11,14 @@ export function useBookController() {
   const loading    = ref(false)
   const error      = ref(null)
 
-  const filters = reactive({ genre_id: '', status: '', publisher_id: '' })
+  const filters = reactive({ 
+    genre_id: '', 
+    status: '', 
+    publisher_id: '',
+    title: '',
+    author: '',
+    isbn: ''
+  })
 
   const modal = reactive({
     visible: false,
@@ -36,11 +43,12 @@ export function useBookController() {
   })
 
   // ── Listar ──────────────────────────────────────────────────────────
-  async function fetchBooks(page = 1) {
+  async function fetchBooks() {
     loading.value = true
     error.value   = null
     try {
-      books.value = await bookRepository.getAll({ ...filters, page })
+      // Pedimos todos para filtrado local instantáneo
+      books.value = await bookRepository.getAll({ per_page: 'all' })
     } catch (err) {
       error.value = 'Error al cargar los libros.'
       toast.error('No se pudieron cargar los libros.')
@@ -48,6 +56,26 @@ export function useBookController() {
       loading.value = false
     }
   }
+
+  // Filtrado reactivo en el cliente para máxima fluidez
+  const filteredBooks = computed(() => {
+    const data = books.value?.data ?? []
+    if (!data.length) return []
+    
+    return data.filter(book => {
+      const title = book.title ?? ''
+      const author = book.author ?? ''
+      const isbn = book.isbn ?? ''
+      
+      const matchTitle = !filters.title || title.toLowerCase().includes(filters.title.toLowerCase())
+      const matchAuthor = !filters.author || author.toLowerCase().includes(filters.author.toLowerCase())
+      const matchIsbn = !filters.isbn || isbn.toLowerCase().includes(filters.isbn.toLowerCase())
+      const matchGenre = !filters.genre_id || book.genre_id == filters.genre_id
+      const matchStatus = !filters.status || book.status === filters.status
+      
+      return matchTitle && matchAuthor && matchIsbn && matchGenre && matchStatus
+    })
+  })
 
   async function fetchMasters() {
     try {
@@ -174,7 +202,7 @@ export function useBookController() {
   }
 
   return {
-    books, genres, publishers, loading, error, filters,
+    books, filteredBooks, genres, publishers, loading, error, filters,
     modal, deleteConfirm, reportModal,
     fetchBooks, fetchMasters, openCreate, openEdit, saveBook,
     confirmDelete, deleteBook, openReportModal, submitReport,
