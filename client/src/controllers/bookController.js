@@ -1,0 +1,182 @@
+import { ref, reactive, computed } from 'vue'
+import { bookRepository } from '@/repositories/bookRepository'
+import { glpiService } from '@/services/glpiService'
+import { useToast } from 'vue-toastification'
+
+export function useBookController() {
+  const toast   = useToast()
+  const books      = ref(null) // paginado
+  const genres     = ref([])
+  const publishers = ref([])
+  const loading    = ref(false)
+  const error      = ref(null)
+
+  const filters = reactive({ genre_id: '', status: '', publisher_id: '' })
+
+  const modal = reactive({
+    visible: false,
+    type: 'create',   // 'create' | 'edit'
+    form: {
+      id: null, title: '', author: '', isbn: '', edition: '',
+      genre_id: '', publisher_id: '', genre: '', publisher: '',
+      status: 'Disponible', synopsis: '',
+    },
+    errors: {},
+    submitting: false,
+  })
+
+  const deleteConfirm = reactive({ visible: false, bookId: null, bookTitle: '' })
+
+  const reportModal = reactive({
+    visible: false,
+    book: null,
+    form: { priority: 'Media', description: '', image: null },
+    submitting: false,
+    errors: {}
+  })
+
+  // ── Listar ──────────────────────────────────────────────────────────
+  async function fetchBooks(page = 1) {
+    loading.value = true
+    error.value   = null
+    try {
+      books.value = await bookRepository.getAll({ ...filters, page })
+    } catch (err) {
+      error.value = 'Error al cargar los libros.'
+      toast.error('No se pudieron cargar los libros.')
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function fetchMasters() {
+    try {
+      const [resG, resP] = await Promise.all([
+        glpiService.listGenres(),
+        glpiService.listPublishers()
+      ])
+      genres.value     = resG.data
+      publishers.value = resP.data
+    } catch (err) {
+      console.error('Error fetching masters:', err)
+    }
+  }
+
+  // ── Abrir modal crear ────────────────────────────────────────────────
+  function openCreate() {
+    modal.type    = 'create'
+    modal.errors  = {}
+    Object.assign(modal.form, {
+      id: null, title: '', author: '', isbn: '', edition: '',
+      genre_id: '', publisher_id: '', genre: '', publisher: '',
+      status: 'Disponible', synopsis: '',
+    })
+    modal.visible = true
+  }
+
+  // ── Abrir modal editar ───────────────────────────────────────────────
+  function openEdit(book) {
+    modal.type   = 'edit'
+    modal.errors = {}
+    Object.assign(modal.form, {
+      id:           book.id,
+      title:        book.title,
+      author:       book.author,
+      isbn:         book.isbn,
+      edition:      book.edition || '',
+      genre:        book.genre || '',
+      publisher:    book.publisher || '',
+      genre_id:     book.genre_id || '',
+      publisher_id: book.publisher_id || '',
+      status:       book.status || 'Disponible',
+      synopsis:     book.synopsis || '',
+    })
+    modal.visible = true
+  }
+
+  // ── Guardar (crear / editar) ─────────────────────────────────────────
+  async function saveBook() {
+    modal.errors    = {}
+    modal.submitting = true
+    try {
+      if (modal.type === 'create') {
+        await bookRepository.create(modal.form)
+        toast.success('Libro creado correctamente.')
+      } else {
+        await bookRepository.update(modal.form.id, modal.form)
+        toast.success('Libro actualizado correctamente.')
+      }
+      modal.visible = false
+      await fetchBooks()
+    } catch (err) {
+      if (err.response?.status === 422) {
+        modal.errors = err.response.data.errors || {}
+      } else {
+        toast.error(err.response?.data?.message || 'Error al guardar el libro.')
+      }
+    } finally {
+      modal.submitting = false
+    }
+  }
+
+  // ── Confirmar eliminación ────────────────────────────────────────────
+  function confirmDelete(book) {
+    deleteConfirm.bookId    = book.id
+    deleteConfirm.bookTitle = book.title
+    deleteConfirm.visible   = true
+  }
+
+  async function deleteBook() {
+    try {
+      await bookRepository.delete(deleteConfirm.bookId)
+      toast.success('Libro eliminado correctamente.')
+      deleteConfirm.visible = false
+      await fetchBooks()
+    } catch (err) {
+      toast.error('No se pudo eliminar el libro.')
+    }
+  }
+
+  // ── Reportar Incidencia ───────────────────────────────────────────────
+  function openReportModal(book) {
+    reportModal.book = book
+    reportModal.form = { priority: 'Media', description: '', image: null }
+    reportModal.errors = {}
+    reportModal.visible = true
+  }
+
+  async function submitReport() {
+    reportModal.submitting = true
+    reportModal.errors = {}
+    
+    const formData = new FormData()
+    formData.append('book_id', reportModal.book.id)
+    formData.append('priority', reportModal.form.priority)
+    formData.append('description', reportModal.form.description)
+    if (reportModal.form.image) {
+      formData.append('image', reportModal.form.image)
+    }
+
+    try {
+      await glpiService.createReport(formData)
+      toast.success('Incidencia reportada correctamente en GLPI.')
+      reportModal.visible = false
+      await fetchBooks()
+    } catch (err) {
+      if (err.response?.status === 422) {
+        reportModal.errors = err.response.data.errors || {}
+      } else {
+        toast.error('Error al reportar la incidencia.')
+      }
+    } finally {
+      reportModal.submitting = false
+    }
+  }
+
+  return {
+    books, genres, publishers, loading, error, filters,
+    modal, deleteConfirm, reportModal,
+    fetchBooks, fetchMasters, openCreate, openEdit, saveBook,
+    confirmDelete, deleteBook, openReportModal, submitReport,
+  }
+}

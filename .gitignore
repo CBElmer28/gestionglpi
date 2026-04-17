@@ -1,0 +1,56 @@
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE/Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Root ignores
+backup-server-glpi.zip
+node_modules/
+dist/
+
+# Client (Vue/Node)
+client/node_modules/
+client/dist/
+client/dist-ssr/
+client/*.local
+client/.env
+
+# Server (Laravel)
+server-laravel/node_modules/
+server-laravel/vendor/
+server-laravel/public/build/
+server-laravel/public/hot/
+server-laravel/public/storage
+server-laravel/storage/*.key
+server-laravel/.env
+server-laravel/.env.backup
+server-laravel/.env.production
+server-laravel/.phpunit.result.cache
+server-laravel/Homestead.json
+server-laravel/Homestead.yaml
+server-laravel/auth.json
+server-laravel/npm-debug.log
+server-laravel/yarn-error.log
+server-laravel/.phpunit.cache
+
+# Server GLPI (Docker/Data)
+server-glpi/glpi_data/
+server-glpi/mysql_data/
+
+# Whitelist backups
+!db_backups/
+!db_backups/*.sql
