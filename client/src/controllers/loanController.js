@@ -147,6 +147,7 @@ export function useLoanController() {
     formData.append('book_id', reportModal.loan.book_id)
     formData.append('priority', reportModal.form.priority)
     formData.append('description', reportModal.form.description)
+    formData.append('technician_login', 'soporte_lectores')
     if (reportModal.form.image) {
       formData.append('image', reportModal.form.image)
     }

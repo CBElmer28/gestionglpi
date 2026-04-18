@@ -149,55 +149,66 @@ class GlpiController extends Controller
         // 3. Sincronizar con GLPI
         $glpiTicketId = null;
         if ($book->glpi_id) {
-            $user = auth()->user();
-            $ticketTitle = "Incidencia: {$book->title}";
-            $ticketContent = "Reportado por: {$user->name} ({$user->email})\n" .
-                             "Desc: {$request->description}\n" .
-                             "Prioridad: {$request->priority}";
+            try {
+                $user = auth()->user();
+                $ticketTitle = "Incidencia: {$book->title}";
+                $ticketContent = "Reportado por: {$user->name} ({$user->email})\n" .
+                                 "Desc: {$request->description}\n" .
+                                 "Prioridad: {$request->priority}";
 
-            // 3.1 Obtener ID del Técnico asignado (soporte_biblioteca)
-            $techLogin = env('GLPI_TECHNICIAN_LOGIN', 'soporte_biblioteca');
-            $techId = $this->glpiService->findUserByLogin($techLogin);
+                // 3.1 Obtener ID del Técnico asignado
+                $techLogin = $request->input('technician_login', env('GLPI_TECHNICIAN_LOGIN', 'soporte_biblioteca'));
+                $techId = $this->glpiService->findUserByLogin($techLogin);
+                
+                \Illuminate\Support\Facades\Log::info('GLPI Report Tech Search', [
+                    'techLogin' => $techLogin,
+                    'foundId'   => $techId
+                ]);
 
-            // 3.2 Obtener ID del Solicitante por correo (Librarian)
-            $requesterId = $this->glpiService->findUserByEmail($user->email);
-            
-            // Si lo encontramos y no teníamos su ID, lo guardamos para el futuro
-            if ($requesterId && !$user->glpi_user_id) {
-                $user->update(['glpi_user_id' => $requesterId]);
-            }
-
-            $ticket = $this->glpiService->createTicket($ticketTitle, $ticketContent, $request->priority, $techId, $requesterId);
-            
-            if ($ticket && isset($ticket['id'])) {
-                $glpiTicketId = $ticket['id'];
-                $report->update(['glpi_ticket_id' => $glpiTicketId]);
-
-                // Vincular Libro al Ticket
-                $this->glpiService->linkBookToTicket($book->glpi_id, $glpiTicketId);
-
-                // Subir y vincular Documento si existe
-                if ($imageFull && file_exists($imageFull)) {
-                    $docId = $this->glpiService->uploadDocument($imageFull, basename($imagePath));
-                    if ($docId) {
-                        $this->glpiService->linkDocumentToTicket($docId, $glpiTicketId);
-                    }
+                // 3.2 Obtener ID del Solicitante por correo
+                $requesterId = $this->glpiService->findUserByEmail($user->email);
+                
+                if ($requesterId && !$user->glpi_user_id) {
+                    $user->update(['glpi_user_id' => $requesterId]);
                 }
 
-                // 4. Enviar Correo de Confirmación
-                try {
-                    $mail = \Illuminate\Support\Facades\Mail::to($user->email);
-                    
-                    // BCC opcional al administrador si está configurado en env
-                    $adminEmail = env('MAIL_ADMIN_REPORT');
-                    if ($adminEmail) {
-                        $mail->bcc($adminEmail);
+                $ticket = $this->glpiService->createTicket($ticketTitle, $ticketContent, $request->priority, $techId, $requesterId);
+                
+                if ($ticket && isset($ticket['id'])) {
+                    $glpiTicketId = $ticket['id'];
+                    $report->update(['glpi_ticket_id' => $glpiTicketId]);
+
+                    // Vincular Libro al Ticket
+                    $this->glpiService->linkBookToTicket($book->glpi_id, $glpiTicketId);
+
+                    // Subir y vincular Documento si existe
+                    if ($imageFull && file_exists($imageFull)) {
+                        $docId = $this->glpiService->uploadDocument($imageFull, basename($imagePath));
+                        if ($docId) {
+                            $this->glpiService->linkDocumentToTicket($docId, $glpiTicketId);
+                        }
                     }
 
-                    $mail->send(new \App\Mail\IncidentReported($report->fresh(['user', 'book'])));
-                } catch (\Exception $e) {
-                    \Illuminate\Support\Facades\Log::error('Error enviando correo de incidencia', ['error' => $e->getMessage()]);
+                    // 4. Enviar Correo de Confirmación
+                    try {
+                        $mail = \Illuminate\Support\Facades\Mail::to($user->email);
+                        if ($adminEmail = env('MAIL_ADMIN_REPORT')) {
+                            $mail->bcc($adminEmail);
+                        }
+                        $mail->send(new \App\Mail\IncidentReported($report->fresh(['user', 'book'])));
+                    } catch (\Exception $e) {
+                        \Illuminate\Support\Facades\Log::error('Error enviando correo de incidencia', ['error' => $e->getMessage()]);
+                    }
+                } else {
+                    \Illuminate\Support\Facades\Log::warning('GLPI Ticket Creation Failed', ['response' => $ticket]);
+                    return response()->json(['message' => 'Error al crear el ticket en GLPI.'], 500);
                 }
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('GLPI Synchronization Exception', [
+                    'message' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+                return response()->json(['message' => 'Error de comunicación con GLPI.'], 500);
             }
         }
 

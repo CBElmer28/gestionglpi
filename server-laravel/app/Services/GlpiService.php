@@ -315,19 +315,21 @@ class GlpiService
     public function findUserByLogin(string $login): ?int
     {
         try {
-            $response = $this->request('GET', "{$this->baseUrl}/User", [
+            // Usamos search/User con criteria para mayor fiabilidad (Campo 1: Login)
+            $response = $this->request('GET', "{$this->baseUrl}/search/User", [
                 'query' => [
-                    'searchText[name]' => $login,
-                    'range' => '0-10'
+                    'criteria[0][field]'      => 1,
+                    'criteria[0][searchtype]' => 'equals',
+                    'criteria[0][value]'      => $login,
+                    'forcedisplay[0]'         => 2, // ID
+                    'range'                   => '0-1'
                 ]
             ]);
 
             if ($response->successful()) {
-                $users = $response->json();
-                foreach ($users as $user) {
-                    if (isset($user['name']) && strtolower($user['name']) === strtolower($login)) {
-                        return (int) $user['id'];
-                    }
+                $data = $response->json();
+                if (isset($data['data']) && count($data['data']) > 0) {
+                    return (int) $data['data'][0][2];
                 }
             }
             return null;
