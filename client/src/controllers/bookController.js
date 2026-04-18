@@ -181,6 +181,7 @@ export function useBookController() {
     formData.append('book_id', reportModal.book.id)
     formData.append('priority', reportModal.form.priority)
     formData.append('description', reportModal.form.description)
+    formData.append('technician_login', 'soporte_biblioteca')
     if (reportModal.form.image) {
       formData.append('image', reportModal.form.image)
     }

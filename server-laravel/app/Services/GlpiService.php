@@ -319,7 +319,7 @@ class GlpiService
             $response = $this->request('GET', "{$this->baseUrl}/search/User", [
                 'query' => [
                     'criteria[0][field]'      => 1,
-                    'criteria[0][searchtype]' => 'equals',
+                    'criteria[0][searchtype]' => 'contains',
                     'criteria[0][value]'      => $login,
                     'forcedisplay[0]'         => 2, // ID
                     'range'                   => '0-1'

@@ -153,7 +153,7 @@ export function useLoanController() {
     }
 
     try {
-      await glpiService.reportIncident(formData)
+      await glpiService.createReport(formData)
       toast.success('Incidencia reportada correctamente a GLPI.')
       reportModal.visible = false
     } catch (err) {

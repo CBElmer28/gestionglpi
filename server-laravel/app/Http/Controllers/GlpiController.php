@@ -168,6 +168,11 @@ class GlpiController extends Controller
                 // 3.2 Obtener ID del Solicitante por correo
                 $requesterId = $this->glpiService->findUserByEmail($user->email);
                 
+                \Illuminate\Support\Facades\Log::info('GLPI Report Requester Search', [
+                    'email'   => $user->email,
+                    'foundId' => $requesterId
+                ]);
+
                 if ($requesterId && !$user->glpi_user_id) {
                     $user->update(['glpi_user_id' => $requesterId]);
                 }
