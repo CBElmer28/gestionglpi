@@ -26,7 +26,8 @@ class AuthService
 
         // Cargar rol y permisos
         $user->load('role.permissions');
-        $permissionSlugs = $user->role ? $user->role->permissions->pluck('slug')->toArray() : [];
+        $role = $user->role;
+        $permissionSlugs = ($role instanceof \App\Models\Role) ? $role->permissions->pluck('slug')->toArray() : [];
 
         // Revocar tokens anteriores
         $user->tokens()->delete();
@@ -40,7 +41,7 @@ class AuthService
                 'id'          => $user->id,
                 'name'        => $user->name,
                 'email'       => $user->email,
-                'role'        => $user->role?->slug ?? $user->role, // Fallback
+                'role'        => ($user->role instanceof \App\Models\Role) ? $user->role->slug : $user->role,
                 'permissions' => $permissionSlugs,
             ],
         ];
@@ -62,7 +63,6 @@ class AuthService
         $lectorRole = Role::where('slug', 'lector')->first();
         
         $data['password'] = Hash::make($data['password']);
-        $data['role']     = 'lector';
         $data['role_id']  = $lectorRole?->id;
 
         $user = $this->userRepository->create($data);
@@ -78,7 +78,7 @@ class AuthService
                 'id'          => $user->id,
                 'name'        => $user->name,
                 'email'       => $user->email,
-                'role'        => 'lector',
+                'role'        => ($user->role instanceof \App\Models\Role) ? $user->role->slug : 'lector',
                 'permissions' => $permissionSlugs,
             ],
         ];

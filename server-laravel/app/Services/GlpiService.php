@@ -38,7 +38,7 @@ class GlpiService
     {
         return Cache::remember('glpi_session_token', $this->sessionTtl, function () {
             try {
-                $response = Http::withHeaders([
+                $response = Http::timeout(5)->withHeaders([
                     'App-Token'     => $this->appToken,
                     'Authorization' => "user_token {$this->userToken}",
                     'Content-Type'  => 'application/json',
@@ -83,7 +83,7 @@ class GlpiService
     protected function request(string $method, string $url, array $options = [])
     {
         $doRequest = function () use ($method, $url, $options) {
-            $http = Http::withHeaders($this->authHeaders());
+            $http = Http::timeout(5)->withHeaders($this->authHeaders());
             return match ($method) {
                 'GET'    => $http->get($url, $options['query'] ?? []),
                 'POST'   => $http->post($url, $options['json'] ?? []),

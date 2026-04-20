@@ -29,7 +29,7 @@ class BookController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        if ($request->user()->role === 'lector') {
+        if ($request->user()->hasRole('lector')) {
             return response()->json(['message' => 'No tiene permisos para realizar esta acción.'], 403);
         }
 
@@ -54,7 +54,7 @@ class BookController extends Controller
 
     public function update(Request $request, int $id): JsonResponse
     {
-        if ($request->user()->role === 'lector') {
+        if ($request->user()->hasRole('lector')) {
             return response()->json(['message' => 'No tiene permisos para realizar esta acción.'], 403);
         }
 

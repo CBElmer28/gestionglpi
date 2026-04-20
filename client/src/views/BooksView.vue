@@ -204,14 +204,11 @@
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">Estado</label>
-            <div class="form-group">
-              <label class="form-label">Estado</label>
               <BaseCombobox 
                 v-model="modal.form.status"
                 :options="bookStatuses.filter(s => s.id !== '')"
                 placeholder="Seleccione un estado..."
               />
-            </div>
             </div>
           </div>
           <div class="form-group">
