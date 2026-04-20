@@ -55,4 +55,4 @@ server-glpi/mysql_data/
 !db_backups/
 !db_backups/*.sql
 
-mysql_data/
+mysql_data/*

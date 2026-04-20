@@ -1,62 +1,37 @@
 services:
-  # 1. Base de Datos Local (Reemplaza temporalmente a RDS)
-  db:
-    image: mariadb:10.11
-    container_name: db-local
-    restart: always
-    environment:
-      - MARIADB_ROOT_PASSWORD=root_pass
-      - MARIADB_DATABASE=gestion_db # Base de datos principal
-      - MARIADB_USER=user_local
-      - MARIADB_PASSWORD=pass_local
-    volumes:
-      - ./mysql_data:/var/lib/mysql
-      # Opcional: Si quieres que se carguen tus backups al iniciar por primera vez:
-      # - ./db_backups:/docker-entrypoint-initdb.d 
-    ports:
-      - "3306:3306"
-
-  # 2. Backend Laravel
+  # 1. Backend Laravel (API)
   laravel-backend:
     build:
       context: ./server-laravel
       dockerfile: Dockerfile
-    container_name: laravel-local
+    container_name: laravel-prod
     restart: always
-    depends_on:
-      - db
     ports:
-      - "80:80"
+      - "80:80" # Tu API de Laravel estará disponible en el puerto HTTP por defecto (80)
     env_file:
-      - ./server-laravel/.env
-    environment:
-      - DB_HOST=db
-      - DB_DATABASE=laravel_biblioteca
-      - DB_USERNAME=user_local
-      - DB_PASSWORD=pass_local
+      - ./server-laravel/.env # Carga las variables desde el .env de Laravel
+    deploy:
+      resources:
+        limits:
+          memory: 1G
 
-  # 3. Sistema GLPI
+  # 2. Sistema GLPI
   glpi:
     image: glpi/glpi:latest
-    container_name: glpi-local
+    container_name: glpi-prod
     restart: always
-    depends_on:
-      - db
     ports:
-      - "8080:80"
+      - "8080:80" # GLPI estará disponible añadiendo :8080 a la IP de tu EC2
     environment:
-      - GLPI_DB_HOST=db
+      # Apuntamos GLPI directamente a la instancia de AWS RDS
+      - GLPI_DB_HOST=tu-instancia-rds.us-east-1.rds.amazonaws.com
       - GLPI_DB_NAME=glpi_db
-      - GLPI_DB_USER=user_local
-      - GLPI_DB_PASSWORD=pass_local
+      - GLPI_DB_USER=admin_rds
+      - GLPI_DB_PASSWORD=tu_password_seguro
     volumes:
+      # Persistencia vital para que GLPI no pierda documentos o plugins si el contenedor se reinicia
       - ./server-glpi/glpi_data:/var/www/html/glpi
-
-  # 4. Mailpit (Para capturar correos de prueba)
-  mailpit:
-    image: axllent/mailpit
-    container_name: mailpit-local
-    restart: always
-    ports:
-      - "8025:8025" # Interfaz Web para ver correos
-      - "1025:1025" # Servidor SMTP para Laravel/GLPI
+    deploy:
+      resources:
+        limits:
+          memory: 1G
