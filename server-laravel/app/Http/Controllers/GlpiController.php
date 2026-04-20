@@ -38,7 +38,7 @@ class GlpiController extends Controller
      */
     public function listGenres(): JsonResponse
     {
-        return response()->json(Genre::orderBy('name')->get());
+        return response()->json(Genre::orderBy('id', 'desc')->get());
     }
  
     /**
@@ -46,7 +46,7 @@ class GlpiController extends Controller
      */
     public function listPublishers(): JsonResponse
     {
-        return response()->json(Publisher::orderBy('name')->get());
+        return response()->json(Publisher::orderBy('id', 'desc')->get());
     }
 
     /**
@@ -114,7 +114,7 @@ class GlpiController extends Controller
     {
         $request->validate([
             'book_id'     => 'required|exists:books,id',
-            'description' => 'required|string|min:10',
+            'description' => ['required', 'string', 'min:10', new \App\Rules\SafeText],
             'priority'    => 'required|in:Baja,Media,Alta',
             'image'       => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
@@ -217,8 +217,23 @@ class GlpiController extends Controller
             }
         }
 
-        // 4. Actualizar estado del libro
-        $book->update(['status' => 'Mantenimiento']);
+        // 4. Actualizar estado del libro local y en GLPI (Solo si NO está prestado)
+        if ($book->status !== 'Prestado') {
+            $book->update(['status' => 'Mantenimiento']);
+
+            if ($book->glpi_id) {
+                $this->glpiService->updateBook($book->glpi_id, [
+                    'title'             => $book->title,
+                    'author'            => $book->author,
+                    'isbn'              => $book->isbn,
+                    'synopsis'          => $book->synopsis,
+                    'edition'           => $book->edition,
+                    'glpi_genre_id'     => $book->genre?->glpi_id,
+                    'glpi_publisher_id' => $book->publisher?->glpi_id,
+                    'glpi_status_id'    => 3, // 3 = Mantenimiento en GLPI
+                ]);
+            }
+        }
 
         return response()->json([
             'message'        => 'Incidencia reportada con éxito.',

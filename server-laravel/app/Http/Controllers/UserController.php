@@ -28,7 +28,7 @@ class UserController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'name'     => 'required|string|max:255',
+            'name'     => ['required', 'string', 'max:255', new \App\Rules\SafeText],
             'email'    => 'required|email|unique:users,email',
             'password' => 'required|string|min:6|confirmed',
             'role_id'  => 'nullable|exists:roles,id',
@@ -50,7 +50,7 @@ class UserController extends Controller
     public function update(Request $request, int $id): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'name'     => 'sometimes|string|max:255',
+            'name'     => ['sometimes', 'string', 'max:255', new \App\Rules\SafeText],
             'email'    => "sometimes|email|unique:users,email,{$id}",
             'password' => 'sometimes|string|min:6|confirmed',
             'role_id'  => 'sometimes|exists:roles,id',

@@ -133,7 +133,20 @@ export function useLoanController() {
   function openReportModal(loan) {
     reportModal.loan = loan
     reportModal.errors = {}
-    reportModal.form = { priority: 'Media', description: '', image: null }
+    
+    // Si el libro ya está en mantenimiento, cargamos los datos del último reporte
+    if (loan.book?.status === 'Mantenimiento' && loan.book?.latest_report) {
+      const report = loan.book.latest_report
+      reportModal.form = {
+        priority: report.priority,
+        description: report.description,
+        glpi_ticket_id: report.glpi_ticket_id,
+        image: null
+      }
+    } else {
+      reportModal.form = { priority: 'Media', description: '', image: null }
+    }
+    
     reportModal.visible = true
   }
 
@@ -154,8 +167,9 @@ export function useLoanController() {
 
     try {
       await glpiService.createReport(formData)
-      toast.success('Incidencia reportada correctamente a GLPI.')
+      toast.success('Gracias por reportar esta incidencia, por favor acerquese a devolver el libro para ayudarlo con su problema')
       reportModal.visible = false
+      await fetchLoans()
     } catch (err) {
       if (err.response?.status === 422) {
         reportModal.errors = err.response.data.errors || {}

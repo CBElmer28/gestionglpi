@@ -30,7 +30,7 @@ class LoanController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'book_id'     => 'required|integer|exists:books,id',
-            'user_name'   => 'required|string|max:255',
+            'user_name'   => ['required', 'string', 'max:255', new \App\Rules\SafeText],
             'loan_date'   => 'nullable|date',
             'return_date' => 'nullable|date|after_or_equal:loan_date',
         ]);
