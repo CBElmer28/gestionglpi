@@ -7,6 +7,8 @@ use App\Models\User;
 use App\Models\Book;
 use App\Models\Genre;
 use App\Models\Publisher;
+use App\Models\Role;
+use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 
@@ -21,8 +23,13 @@ class BookManagementTest extends TestCase
     {
         parent::setUp();
         
-        $this->admin = User::factory()->create(['role' => 'admin']);
-        $this->bibliotecario = User::factory()->create(['role' => 'bibliotecario']);
+        // Inicializar roles y permisos
+        $this->seed(RolesAndPermissionsSeeder::class);
+        $adminRole = Role::where('slug', 'admin')->first();
+        $biblioRole = Role::where('slug', 'bibliotecario')->first();
+
+        $this->admin = User::factory()->create(['role_id' => $adminRole->id]);
+        $this->bibliotecario = User::factory()->create(['role_id' => $biblioRole->id]);
         
         // Mock de GLPI para evitar llamadas reales durante el CRUD
         Http::fake([

@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">69.23% </span>
+                <span class="strong">68.96% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>18/26</span>
+                <span class='fraction'>20/29</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>12/12</span>
+                <span class='fraction'>14/14</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">11.11% </span>
+                <span class="strong">10% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>1/9</span>
+                <span class='fraction'>1/10</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>18/18</span>
+                <span class='fraction'>20/20</span>
             </div>
         
             
@@ -153,7 +153,20 @@
 <a name='L88'></a><a href='#L88'>88</a>
 <a name='L89'></a><a href='#L89'>89</a>
 <a name='L90'></a><a href='#L90'>90</a>
-<a name='L91'></a><a href='#L91'>91</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L91'></a><a href='#L91'>91</a>
+<a name='L92'></a><a href='#L92'>92</a>
+<a name='L93'></a><a href='#L93'>93</a>
+<a name='L94'></a><a href='#L94'>94</a>
+<a name='L95'></a><a href='#L95'>95</a>
+<a name='L96'></a><a href='#L96'>96</a>
+<a name='L97'></a><a href='#L97'>97</a>
+<a name='L98'></a><a href='#L98'>98</a>
+<a name='L99'></a><a href='#L99'>99</a>
+<a name='L100'></a><a href='#L100'>100</a>
+<a name='L101'></a><a href='#L101'>101</a>
+<a name='L102'></a><a href='#L102'>102</a>
+<a name='L103'></a><a href='#L103'>103</a>
+<a name='L104'></a><a href='#L104'>104</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">3x</span>
@@ -164,8 +177,15 @@
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -226,17 +246,23 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">5x</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -254,6 +280,7 @@ const PublishersView = <span class="fstat-no" title="function not covered" >()</
 const LoansView     = <span class="fstat-no" title="function not covered" >()</span> =&gt; <span class="cstat-no" title="statement not covered" >import('@/views/LoansView.vue')</span>
 const UsersView     = <span class="fstat-no" title="function not covered" >()</span> =&gt; <span class="cstat-no" title="statement not covered" >import('@/views/UsersView.vue')</span>
 const GlpiView      = <span class="fstat-no" title="function not covered" >()</span> =&gt; <span class="cstat-no" title="statement not covered" >import('@/views/GlpiView.vue')</span>
+const NotFoundView  = <span class="fstat-no" title="function not covered" >()</span> =&gt; <span class="cstat-no" title="statement not covered" >import('@/views/NotFoundView.vue')</span>
 &nbsp;
 const router = createRouter({
   history: createWebHistory(),
@@ -278,37 +305,43 @@ const router = createRouter({
       path: '/books',
       name: 'books',
       component: BooksView,
-      meta: { title: 'Libros' },
+      meta: { title: 'Libros', permission: 'books.view' },
     },
     {
       path: '/genres',
       name: 'genres',
       component: GenresView,
-      meta: { title: 'Géneros' },
+      meta: { title: 'Géneros', permission: 'catalog.manage' },
     },
     {
       path: '/publishers',
       name: 'publishers',
       component: PublishersView,
-      meta: { title: 'Editoriales' },
+      meta: { title: 'Editoriales', permission: 'catalog.manage' },
     },
     {
       path: '/loans',
       name: 'loans',
       component: LoansView,
-      meta: { title: 'Préstamos' },
+      meta: { title: 'Préstamos', permission: 'loans.view_own' },
     },
     {
       path: '/users',
       name: 'users',
       component: UsersView,
-      meta: { title: 'Usuarios', requiresAdmin: true },
+      meta: { title: 'Usuarios', permission: 'users.manage' },
     },
     {
       path: '/glpi',
       name: 'glpi',
       component: GlpiView,
-      meta: { title: 'GLPI' },
+      meta: { title: 'GLPI', permission: 'glpi.manage' },
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'not-found',
+      component: NotFoundView,
+      meta: { public: true, title: 'No Encontrado' },
     },
   ],
 })
@@ -317,16 +350,22 @@ const router = createRouter({
 export const navigationGuard = (to) =&gt; {
   const auth = useAuthStore()
 &nbsp;
+  // 1. Si la ruta no es pública y no está autenticado -&gt; login
   if (!to.meta.public &amp;&amp; !auth.isAuthenticated) {
     return { name: 'login', query: { redirect: to.fullPath } }
   }
 &nbsp;
+  // 2. Si ya está autenticado e intenta ir al login -&gt; dashboard
   if (to.name === 'login' &amp;&amp; auth.isAuthenticated) {
     return { name: 'dashboard' }
   }
 &nbsp;
-  if (to.meta.requiresAdmin &amp;&amp; !auth.isAdmin) {
-    return { name: 'dashboard' }
+  // 3. Verificación de permisos dinámicos
+  if (to.meta.permission &amp;&amp; auth.isAuthenticated) {
+    if (!auth.can(to.meta.permission)) {
+      // Si no tiene el permiso, enviamos a 404 (Access Denied)
+      return { name: 'not-found' }
+    }
   }
 }
 &nbsp;
@@ -340,7 +379,7 @@ export default router
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-04-15T22:17:08.778Z
+                at 2026-04-20T02:17:02.707Z
             </div>
         <script src="../prettify.js"></script>
         <script>

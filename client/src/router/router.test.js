@@ -38,19 +38,19 @@ describe('router/index.js (navigationGuard)', () => {
     expect(result).toEqual({ name: 'dashboard' })
   })
 
-  it('bloquea rutas de admin si el usuario no tiene rol admin', () => {
-    const to = { meta: { requiresAdmin: true } }
-    authStore.user = { role: 'bibliotecario' }
+  it('bloquea rutas si el usuario no tiene el permiso requerido', () => {
+    const to = { meta: { permission: 'users.manage' } }
+    authStore.permissions = []
     authStore.token = 'valid-token'
     
     const result = navigationGuard(to)
     
-    expect(result).toEqual({ name: 'dashboard' })
+    expect(result).toEqual({ name: 'not-found' })
   })
 
-  it('permite rutas de admin si el usuario es admin', () => {
-    const to = { meta: { requiresAdmin: true } }
-    authStore.user = { role: 'admin' }
+  it('permite acceso si el usuario tiene el permiso requerido', () => {
+    const to = { meta: { permission: 'users.manage' } }
+    authStore.permissions = ['users.manage']
     authStore.token = 'valid-token'
     
     const result = navigationGuard(to)

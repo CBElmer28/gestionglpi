@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use Tests\TestCase;
 use App\Models\User;
 use App\Models\Book;
+use App\Models\Role;
+use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 class AccessControlTest extends TestCase
@@ -18,8 +20,12 @@ class AccessControlTest extends TestCase
     {
         parent::setUp();
         
-        $this->admin = User::factory()->create(['role' => 'admin']);
-        $this->bibliotecario = User::factory()->create(['role' => 'bibliotecario']);
+        $this->seed(RolesAndPermissionsSeeder::class);
+        $adminRole = Role::where('slug', 'admin')->first();
+        $biblioRole = Role::where('slug', 'bibliotecario')->first();
+
+        $this->admin = User::factory()->create(['role_id' => $adminRole->id]);
+        $this->bibliotecario = User::factory()->create(['role_id' => $biblioRole->id]);
     }
 
     /**

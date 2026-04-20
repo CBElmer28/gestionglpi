@@ -52,7 +52,10 @@ class User extends Authenticatable
      */
     public function hasRole(string $roleSlug): bool
     {
-        return $this->role?->slug === $roleSlug || $this->role === $roleSlug;
+        if (is_string($this->role)) {
+            return $this->role === $roleSlug;
+        }
+        return $this->role?->slug === $roleSlug;
     }
 
     public function isAdmin(): bool

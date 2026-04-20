@@ -61,17 +61,15 @@ test.describe('Flujo de la Biblioteca Digital', () => {
     await page.fill('#modal-book input[placeholder="978-XXXXXXXXXX"]', bookIsbn);
     await page.fill('#modal-book textarea', 'Descripción de prueba.');
 
-    // Esperar a que los select del modal tengan opciones (excluyendo la opción por defecto)
-    const genreSelect = page.locator('#modal-book select').nth(0);
-    const pubSelect = page.locator('#modal-book select').nth(1);
+    // Seleccionar Género (Usando el componente BaseCombobox)
+    await page.locator('.form-group:has-text("Género") .form-control').click();
+    await expect(page.locator('.combobox-item').first()).toBeVisible({ timeout: 10000 });
+    await page.locator('.combobox-item').first().click();
 
-    // Los elementos <option> no son "visibles" para Playwright en el sentido estricto.
-    // Usamos toBeAttached para verificar que existan en el DOM.
-    await expect(genreSelect.locator('option').nth(1)).toBeAttached({ timeout: 10000 });
-    await expect(pubSelect.locator('option').nth(1)).toBeAttached({ timeout: 10000 });
-
-    await genreSelect.selectOption({ index: 1 });
-    await pubSelect.selectOption({ index: 1 });
+    // Seleccionar Editorial (Usando el componente BaseCombobox)
+    await page.locator('.form-group:has-text("Editorial") .form-control').click();
+    await expect(page.locator('.combobox-item').first()).toBeVisible({ timeout: 10000 });
+    await page.locator('.combobox-item').first().click();
 
     // 3. Guardar
     await page.click('#btn-save-book');

@@ -27,7 +27,7 @@ describe('authStore', () => {
 
   it('login exitoso actualiza el estado y localStorage', async () => {
     const store = useAuthStore()
-    const mockUser = { id: 1, name: 'Admin', role: 'admin' }
+    const mockUser = { id: 1, name: 'Admin', role: { slug: 'admin' } }
     const mockToken = 'secret-token'
     
     authService.login.mockResolvedValueOnce({ 
@@ -45,7 +45,7 @@ describe('authStore', () => {
 
   it('clearSession limpia el estado y localStorage', () => {
     const store = useAuthStore()
-    store.setSession('token', { name: 'User' })
+    store.setSession({ name: 'User' }, 'token')
     
     store.clearSession()
 
@@ -56,7 +56,7 @@ describe('authStore', () => {
 
   it('logout limpia sesion incluso si la API falla', async () => {
     const store = useAuthStore()
-    store.setSession('token', { name: 'User' })
+    store.setSession({ name: 'User' }, 'token')
     
     authService.logout.mockRejectedValueOnce(new Error('API Error'))
     
