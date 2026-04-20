@@ -3,25 +3,8 @@
     <!-- Panel izquierdo decorativo -->
     <div class="login-hero">
       <div class="login-hero-content">
-        <div class="login-hero-icon">
-          <font-awesome-icon icon="book" />
-        </div>
-        <h1>Biblioteca Digital</h1>
-        <p>Gestiona libros, préstamos y usuarios de forma fácil e integrada con GLPI.</p>
-
-        <div class="login-hero-features">
-          <div class="feature-item">
-            <font-awesome-icon icon="book" />
-            <span>Catálogo completo de libros</span>
-          </div>
-          <div class="feature-item">
-            <font-awesome-icon icon="clipboard-list" />
-            <span>Control de préstamos en tiempo real</span>
-          </div>
-          <div class="feature-item">
-            <font-awesome-icon icon="link" />
-            <span>Integración con GLPI</span>
-          </div>
+        <div class="login-hero-brand">
+          <img src="@/assets/readout-logo.webp" alt="ReadOut Logo" class="readout-logo-img" />
         </div>
       </div>
       <div class="login-hero-pattern"></div>
@@ -162,67 +145,64 @@ async function handleLogin() {
 
 .login-hero {
   flex: 1;
-  background: linear-gradient(135deg, var(--c-primary-900) 0%, var(--c-primary-700) 60%, var(--c-primary-600) 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: var(--sp-12);
   position: relative;
   overflow: hidden;
+  background: #001c38;
+}
+
+.login-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url('@/assets/login-bg.webp') no-repeat center center;
+  background-size: cover;
+  filter: blur(8px);
+  transform: scale(1.1);
+  z-index: 0;
 }
 
 .login-hero-pattern {
   position: absolute;
   inset: 0;
-  background-image:
-    radial-gradient(circle at 20% 80%, rgba(201,162,39,.15) 0%, transparent 50%),
-    radial-gradient(circle at 80% 20%, rgba(168,196,224,.1) 0%, transparent 50%);
+  background: radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.4) 100%);
   pointer-events: none;
 }
 
 .login-hero-content {
   position: relative;
   z-index: 1;
-  max-width: 420px;
+  max-width: 500px;
+  width: 100%;
   color: #fff;
+  background: rgba(0, 28, 56, 0.7);
+  padding: 0; /* Removed padding so image touches the edges */
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(4px);
+  overflow: hidden; /* Ensure rounded corners clip the image */
 }
 
-.login-hero-icon {
-  font-size: 4rem;
-  margin-bottom: var(--sp-6);
-  filter: drop-shadow(0 8px 24px rgba(201,162,39,.4));
-}
-
-.login-hero-content h1 {
-  font-size: 2.4rem;
-  color: #fff;
-  margin-bottom: var(--sp-4);
-  letter-spacing: -.01em;
-}
-
-.login-hero-content p {
-  color: rgba(255,255,255,.75);
-  font-size: 1.05rem;
-  line-height: 1.7;
-  margin-bottom: var(--sp-10);
-}
-
-.login-hero-features {
+.login-hero-brand {
+  width: 100%;
   display: flex;
-  flex-direction: column;
-  gap: var(--sp-3);
+  justify-content: center;
 }
 
-.feature-item {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
-  color: rgba(255,255,255,.85);
-  font-size: .92rem;
-  background: rgba(255,255,255,.06);
-  padding: var(--sp-3) var(--sp-4);
-  border-radius: var(--radius-md);
-  border: 1px solid rgba(255,255,255,.1);
+.readout-logo-img {
+  width: 100%;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 20px 40px rgba(0,0,0,0.3));
+  transition: transform var(--tr-base);
+  mix-blend-mode: lighten;
+}
+
+.readout-logo-img:hover {
+  transform: translateY(-5px);
 }
 
 /* ── Form panel ── */
@@ -238,10 +218,12 @@ async function handleLogin() {
 
 .login-form-card {
   width: 100%;
-  background: var(--c-surface);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
   border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-xl);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   padding: var(--sp-8);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .login-form-footer {
