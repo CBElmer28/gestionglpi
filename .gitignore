@@ -54,3 +54,6 @@ server-glpi/mysql_data/
 # Whitelist backups
 !db_backups/
 !db_backups/*.sql
+
+
+mysql_data/*
