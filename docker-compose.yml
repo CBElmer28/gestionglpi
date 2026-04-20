@@ -1,0 +1,62 @@
+services:
+  # 1. Base de Datos Local (Reemplaza temporalmente a RDS)
+  db:
+    image: mariadb:10.11
+    container_name: db-local
+    restart: always
+    environment:
+      - MARIADB_ROOT_PASSWORD=root_pass
+      - MARIADB_DATABASE=gestion_db # Base de datos principal
+      - MARIADB_USER=user_local
+      - MARIADB_PASSWORD=pass_local
+    volumes:
+      - ./mysql_data:/var/lib/mysql
+      # Opcional: Si quieres que se carguen tus backups al iniciar por primera vez:
+      # - ./db_backups:/docker-entrypoint-initdb.d 
+    ports:
+      - "3306:3306"
+
+  # 2. Backend Laravel
+  laravel-backend:
+    build:
+      context: ./server-laravel
+      dockerfile: Dockerfile
+    container_name: laravel-local
+    restart: always
+    depends_on:
+      - db
+    ports:
+      - "80:80"
+    env_file:
+      - ./server-laravel/.env
+    environment:
+      - DB_HOST=db
+      - DB_DATABASE=laravel_biblioteca
+      - DB_USERNAME=user_local
+      - DB_PASSWORD=pass_local
+
+  # 3. Sistema GLPI
+  glpi:
+    image: glpi/glpi:latest
+    container_name: glpi-local
+    restart: always
+    depends_on:
+      - db
+    ports:
+      - "8080:80"
+    environment:
+      - GLPI_DB_HOST=db
+      - GLPI_DB_NAME=glpi_db
+      - GLPI_DB_USER=user_local
+      - GLPI_DB_PASSWORD=pass_local
+    volumes:
+      - ./server-glpi/glpi_data:/var/www/html/glpi
+
+  # 4. Mailpit (Para capturar correos de prueba)
+  mailpit:
+    image: axllent/mailpit
+    container_name: mailpit-local
+    restart: always
+    ports:
+      - "8025:8025" # Interfaz Web para ver correos
+      - "1025:1025" # Servidor SMTP para Laravel/GLPI
