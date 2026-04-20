@@ -12,7 +12,7 @@ class LoanRepository implements LoanRepositoryInterface
 {
     public function all(array $filters = []): LengthAwarePaginator
     {
-        $query = Loan::with('book');
+        $query = Loan::with(['book.latestReport']);
 
         if (!empty($filters['status'])) {
             $query->where('status', $filters['status']);
@@ -26,12 +26,12 @@ class LoanRepository implements LoanRepositoryInterface
             $query->where('user_name', 'like', '%' . $filters['user_name'] . '%');
         }
 
-        return $query->orderBy('loan_date', 'desc')->paginate(15);
+        return $query->orderBy('id', 'desc')->paginate(15);
     }
 
     public function find(int $id): ?Loan
     {
-        return Loan::with('book')->find($id);
+        return Loan::with(['book.latestReport'])->find($id);
     }
 
     public function create(array $data): Loan
@@ -60,7 +60,7 @@ class LoanRepository implements LoanRepositoryInterface
 
     public function getOverdueLoans(): Collection
     {
-        return Loan::with('book')
+        return Loan::with(['book.latestReport'])
             ->where('status', 'Activo')
             ->whereNotNull('return_date')
             ->where('return_date', '<', Carbon::today())

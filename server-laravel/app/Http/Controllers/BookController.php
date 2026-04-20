@@ -13,7 +13,7 @@ class BookController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $filters = $request->only(['genre_id', 'status', 'publisher_id', 'q']);
+        $filters = $request->only(['genre_id', 'status', 'publisher_id', 'q', 'title', 'author', 'isbn', 'per_page']);
         $books   = $this->bookService->getAll($filters);
         return response()->json($books);
     }
@@ -34,14 +34,14 @@ class BookController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'title'        => 'required|string|max:255',
-            'author'       => 'required|string|max:255',
-            'isbn'         => 'required|string|max:50|unique:books,isbn',
-            'edition'      => 'nullable|string|max:100',
-            'genre_id'     => 'nullable|exists:genres,id',
-            'publisher_id' => 'nullable|exists:publishers,id',
+            'title'        => ['required', 'string', 'max:255', new \App\Rules\SafeText],
+            'author'       => ['required', 'string', 'max:255', new \App\Rules\SafeText],
+            'isbn'         => ['required', 'string', 'max:50', 'unique:books,isbn', new \App\Rules\SafeText],
+            'edition'      => ['required', 'string', 'max:100', new \App\Rules\SafeText],
+            'genre_id'     => 'required|exists:genres,id',
+            'publisher_id' => 'required|exists:publishers,id',
             'status'       => 'nullable|in:Disponible,Prestado,Mantenimiento',
-            'synopsis'     => 'nullable|string',
+            'synopsis'     => ['nullable', 'string', new \App\Rules\SafeText],
         ]);
 
         if ($validator->fails()) {
@@ -59,14 +59,14 @@ class BookController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'title'        => 'sometimes|string|max:255',
-            'author'       => 'sometimes|string|max:255',
-            'isbn'         => "sometimes|string|max:50|unique:books,isbn,{$id}",
-            'edition'      => 'nullable|string|max:100',
-            'genre_id'     => 'nullable|exists:genres,id',
-            'publisher_id' => 'nullable|exists:publishers,id',
+            'title'        => ['sometimes', 'required', 'string', 'max:255', new \App\Rules\SafeText],
+            'author'       => ['sometimes', 'required', 'string', 'max:255', new \App\Rules\SafeText],
+            'isbn'         => ['sometimes', 'required', 'string', 'max:50', "unique:books,isbn,{$id}", new \App\Rules\SafeText],
+            'edition'      => ['sometimes', 'required', 'string', 'max:100', new \App\Rules\SafeText],
+            'genre_id'     => 'sometimes|required|exists:genres,id',
+            'publisher_id' => 'sometimes|required|exists:publishers,id',
             'status'       => 'nullable|in:Disponible,Prestado,Mantenimiento',
-            'synopsis'     => 'nullable|string',
+            'synopsis'     => ['nullable', 'string', new \App\Rules\SafeText],
         ]);
 
         if ($validator->fails()) {
