@@ -1,20 +1,21 @@
 services:
-  # 1. Base de Datos Local (Reemplaza temporalmente a RDS)
+  # 1. Base de Datos Local
   db:
     image: mariadb:10.11
     container_name: db-local
     restart: always
     environment:
       - MARIADB_ROOT_PASSWORD=root_pass
-      - MARIADB_DATABASE=gestion_db # Base de datos principal
       - MARIADB_USER=user_local
       - MARIADB_PASSWORD=pass_local
+      # Eliminamos MARIADB_DATABASE para que el script cree las dos.
     volumes:
       - ./mysql_data:/var/lib/mysql
-      # Opcional: Si quieres que se carguen tus backups al iniciar por primera vez:
-      # - ./db_backups:/docker-entrypoint-initdb.d 
+      # Este volumen inyecta el script para crear ambas bases de datos:
+      - ./init-dbs.sql:/docker-entrypoint-initdb.d/init-dbs.sql 
     ports:
-      - "3306:3306"
+      # CAMBIO DE PUERTO: Tu PC usará el 3307 (XAMPP es feliz), el contenedor usa el 3306.
+      - "3307:3306" 
 
   # 2. Backend Laravel
   laravel-backend:
@@ -30,8 +31,10 @@ services:
     env_file:
       - ./server-laravel/.env
     environment:
+      # Laravel sigue apuntando al puerto 3306 interno de la red de Docker
       - DB_HOST=db
-      - DB_DATABASE=laravel_biblioteca
+      - DB_PORT=3306 
+      - DB_DATABASE=laravel_biblioteca # Base de datos específica para Laravel
       - DB_USERNAME=user_local
       - DB_PASSWORD=pass_local
 
@@ -45,18 +48,19 @@ services:
     ports:
       - "8080:80"
     environment:
+      # GLPI apunta a su propia base de datos
       - GLPI_DB_HOST=db
-      - GLPI_DB_NAME=glpi_db
+      - GLPI_DB_NAME=glpi_db # Base de datos específica para GLPI
       - GLPI_DB_USER=user_local
       - GLPI_DB_PASSWORD=pass_local
     volumes:
       - ./server-glpi/glpi_data:/var/www/html/glpi
 
-  # 4. Mailpit (Para capturar correos de prueba)
+  # 4. Mailpit
   mailpit:
     image: axllent/mailpit
     container_name: mailpit-local
     restart: always
     ports:
-      - "8025:8025" # Interfaz Web para ver correos
-      - "1025:1025" # Servidor SMTP para Laravel/GLPI
+      - "8025:8025" 
+      - "1025:1025"
