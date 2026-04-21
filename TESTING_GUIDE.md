@@ -1,6 +1,27 @@
-# Guía de Pruebas — Sistema ReadOut
-
 Este documento describe la estrategia de pruebas implementada para garantizar la calidad, seguridad y rendimiento del sistema **ReadOut**.
+
+## 🛠️ Instalación en una Nueva Máquina
+
+Sigue estos pasos para preparar el entorno y asegurar que todas las pruebas pasen correctamente:
+
+### 1. Clonar y Preparar el Backend
+```bash
+cd server-laravel
+composer install
+cp .env.example .env
+php artisan key:generate
+touch database/database.sqlite  # Opcional si usas :memory: en tests
+php artisan migrate --seed      # Carga roles y permisos necesarios
+```
+
+### 2. Preparar el Frontend
+```bash
+cd ../client
+npm install
+```
+
+### 3. Ejecutar la Suite de Pruebas
+Una vez instaladas las dependencias, ya puedes correr los comandos de la sección siguiente. **Nota**: No necesitas tener GLPI corriendo para pasar los tests, pues la comunicación está simulada (mocked).
 
 ## 🚀 Cómo ejecutar las pruebas
 
