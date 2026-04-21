@@ -50,6 +50,7 @@ class LoanService
         DB::transaction(function () use ($data, $book) {
             $this->loanRepository->create([
                 'book_id'     => $data['book_id'],
+                'user_id'     => $data['user_id'] ?? null,
                 'user_name'   => $data['user_name'],
                 'loan_date'   => $data['loan_date'] ?? Carbon::today()->toDateString(),
                 'return_date' => $data['return_date'] ?? null,
