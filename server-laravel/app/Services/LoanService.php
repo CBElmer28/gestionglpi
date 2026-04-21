@@ -13,6 +13,7 @@ class LoanService
     public function __construct(
         protected LoanRepositoryInterface $loanRepository,
         protected BookRepositoryInterface $bookRepository,
+        protected BookService $bookService,
     ) {}
 
     public function getAll(array $filters = [])
@@ -49,14 +50,15 @@ class LoanService
         DB::transaction(function () use ($data, $book) {
             $this->loanRepository->create([
                 'book_id'     => $data['book_id'],
+                'user_id'     => $data['user_id'] ?? null,
                 'user_name'   => $data['user_name'],
                 'loan_date'   => $data['loan_date'] ?? Carbon::today()->toDateString(),
                 'return_date' => $data['return_date'] ?? null,
                 'status'      => 'Activo',
             ]);
 
-            // Actualizar estado del libro a "Prestado"
-            $this->bookRepository->update($book->id, ['status' => 'Prestado']);
+            // Actualizar estado del libro a "Prestado" y sincronizar con GLPI
+            $this->bookService->update($book->id, ['status' => 'Prestado']);
         });
 
         return ['success' => true, 'message' => 'Préstamo creado correctamente.'];
@@ -83,8 +85,15 @@ class LoanService
                 'return_date' => Carbon::today()->toDateString(),
             ]);
 
-            // Liberar el libro
-            $this->bookRepository->update($loan->book_id, ['status' => 'Disponible']);
+            // Verificar si hubo incidencias reportadas durante el préstamo
+            $hasIncidents = \App\Models\Report::where('book_id', $loan->book_id)
+                ->where('created_at', '>=', $loan->loan_date)
+                ->exists();
+
+            $newStatus = $hasIncidents ? 'Mantenimiento' : 'Disponible';
+
+            // Liberar el libro (o mandarlo a mantenimiento) y sincronizar con GLPI
+            $this->bookService->update($loan->book_id, ['status' => $newStatus]);
         });
 
         return ['success' => true, 'message' => 'Devolución registrada correctamente.'];

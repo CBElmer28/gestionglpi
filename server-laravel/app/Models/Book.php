@@ -46,4 +46,9 @@ class Book extends Model
     {
         return $this->hasMany(Loan::class, 'book_id');
     }
+
+    public function latestReport(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Report::class, 'book_id')->latestOfMany();
+    }
 }

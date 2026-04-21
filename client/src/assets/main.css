@@ -494,6 +494,46 @@ h4 { font-size: 1.1rem; }
   border-radius: var(--radius-sm);
 }
 
+.btn-action-edit {
+  color: var(--c-primary);
+  background: transparent;
+}
+.btn-action-edit:hover {
+  background: var(--c-primary-50);
+  color: var(--c-primary-700);
+  transform: translateY(-2px);
+}
+
+.btn-action-report {
+  color: var(--c-gold-600);
+  background: transparent;
+}
+.btn-action-report:hover {
+  background: #fef9ec;
+  color: var(--c-gold-500);
+  transform: translateY(-2px);
+}
+
+.btn-action-info {
+  color: var(--c-text-muted);
+  background: transparent;
+}
+.btn-action-info:hover {
+  background: var(--c-border-light);
+  color: var(--c-text-secondary);
+  transform: translateY(-2px);
+}
+
+.btn-action-delete {
+  color: var(--c-danger);
+  background: transparent;
+}
+.btn-action-delete:hover {
+  background: #fef2f2;
+  color: #b91c1c;
+  transform: translateY(-2px);
+}
+
 /* ── Badges / Pills ── */
 .badge {
   display: inline-flex;

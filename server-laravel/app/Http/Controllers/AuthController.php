@@ -57,7 +57,7 @@ class AuthController extends Controller
     public function register(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'name'     => ['required', 'string', 'max:255', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/'],
+            'name'     => ['required', 'string', 'max:255', 'regex:/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/', new \App\Rules\SafeText],
             'email'    => 'required|email|max:255|unique:users,email',
             'password' => 'required|string|min:6|confirmed',
         ], [

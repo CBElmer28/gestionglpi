@@ -1,11 +1,11 @@
 <template>
   <aside class="sidebar">
     <div class="sidebar-logo">
-      <div class="sidebar-logo-icon">
-        <font-awesome-icon icon="book" />
+      <div class="sidebar-logo-brand">
+        <img src="@/assets/readout-icon.webp" alt="ReadOut Icon" class="sidebar-icon-img" />
       </div>
       <div class="sidebar-logo-text">
-        <strong>Biblioteca</strong>
+        <strong>ReadOut</strong>
         <span>Sistema de Gestión</span>
       </div>
     </div>
@@ -129,6 +129,22 @@ async function handleLogout() {
   display: flex;
   align-items: center;
   gap: var(--sp-3);
+}
+
+.sidebar-logo-brand {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sidebar-icon-img {
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.4));
+  mix-blend-mode: lighten;
 }
 
 .sidebar-user-avatar {

@@ -73,14 +73,16 @@
               </td>
               <td>
                 <div style="display:flex;gap:4px;justify-content:flex-end">
-                  <!-- Botón Reportar -->
+                  <!-- Botón Reportar / Ver Info -->
                   <button
                     v-if="auth.can('incidents.report') && (loan.status === 'Activo' || loan.status === 'Atrasado')"
-                    class="btn btn-ghost btn-sm text-warning"
+                    class="btn btn-sm"
+                    :class="loan.book?.status === 'Mantenimiento' ? 'btn-action-info' : 'btn-action-report'"
                     @click="openReportModal(loan)"
-                    title="Reportar Problema"
+                    :title="loan.book?.status === 'Mantenimiento' ? 'Ver información de la incidencia' : 'Reportar daño/incidencia'"
                   >
-                    <font-awesome-icon icon="exclamation-triangle" /> Reportar
+                    <font-awesome-icon :icon="loan.book?.status === 'Mantenimiento' ? 'circle-info' : 'exclamation-triangle'" />
+                    {{ loan.book?.status === 'Mantenimiento' ? 'Ver Info' : 'Reportar' }}
                   </button>
 
                   <button
@@ -174,13 +176,17 @@
       <div id="modal-report" class="modal" style="max-width:500px">
         <div class="modal-header">
           <h3 class="modal-title">
-            <font-awesome-icon icon="exclamation-triangle" /> Reportar Incidencia
+            <font-awesome-icon :icon="isReadOnlyReport ? 'circle-info' : 'exclamation-triangle'" />
+            {{ isReadOnlyReport ? 'Información de la Incidencia' : 'Reportar Incidencia' }}
           </h3>
           <button class="btn btn-ghost btn-icon" @click="reportModal.visible = false">
             <font-awesome-icon icon="times" />
           </button>
         </div>
         <div class="modal-body">
+          <div v-if="isReadOnlyReport" class="alert alert-info" style="margin-bottom:var(--sp-4); padding:var(--sp-2) var(--sp-3); font-size:.85rem">
+            <font-awesome-icon icon="lock" /> Este libro está en mantenimiento. La incidencia ya ha sido reportada.
+          </div>
           <div v-if="reportModal.loan" style="margin-bottom:var(--sp-4);padding:var(--sp-3);background:var(--c-bg-page);border-radius:var(--radius-sm)">
              <div style="font-weight:600;font-size:.9rem">{{ reportModal.loan.book?.title }}</div>
              <div style="font-size:.8rem;color:var(--c-text-secondary)">{{ reportModal.loan.book?.author }}</div>
@@ -192,6 +198,7 @@
               v-model="reportModal.form.priority"
               :options="priorityOptions"
               placeholder="Seleccione prioridad..."
+              :disabled="isReadOnlyReport"
             />
           </div>
 
@@ -202,19 +209,27 @@
               class="form-control"
               rows="4"
               placeholder="Ej: El libro tiene varias hojas sueltas y la portada dañada..."
+              :disabled="isReadOnlyReport"
             ></textarea>
             <span v-if="reportModal.errors.description" class="form-error">{{ reportModal.errors.description[0] }}</span>
           </div>
 
-          <div class="form-group">
+          <div v-if="isReadOnlyReport && reportModal.form.glpi_ticket_id" class="form-group">
+            <label class="form-label">Ticket GLPI</label>
+            <div class="form-control" style="background:var(--c-bg-page); font-family:monospace; font-weight:600">
+              #{{ reportModal.form.glpi_ticket_id }}
+            </div>
+          </div>
+
+          <div v-if="!isReadOnlyReport" class="form-group">
             <label class="form-label">Evidencia Fotográfica (Opcional)</label>
             <input type="file" @change="handleFileChange" accept="image/jpeg,image/png,image/webp" class="form-control" />
             <span v-if="reportModal.errors.image" class="form-error">{{ reportModal.errors.image[0] }}</span>
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-ghost" @click="reportModal.visible = false">Cancelar</button>
-          <button class="btn btn-warning" @click="submitReport" :disabled="reportModal.submitting">
+          <button class="btn btn-ghost" @click="reportModal.visible = false">{{ isReadOnlyReport ? 'Cerrar' : 'Cancelar' }}</button>
+          <button v-if="!isReadOnlyReport" class="btn btn-warning" @click="submitReport" :disabled="reportModal.submitting">
             <span v-if="reportModal.submitting" class="spinner"></span>
             <span v-else>Enviar a GLPI</span>
           </button>
@@ -247,11 +262,13 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { useLoanController } from '@/controllers/loanController'
 import { useAuthStore } from '@/store/auth'
 import BaseCombobox from '@/components/common/BaseCombobox.vue'
 
 const auth = useAuthStore()
+const route = useRoute()
 const {
   loans, books, lectors, loading, filters, modal, returnConfirm, reportModal,
   fetchLoans, openCreate, createLoan, confirmReturn, returnLoan, 
@@ -295,8 +312,17 @@ const loanList = computed(() => loans.value?.data ?? [])
 const isLectorMode = computed(() => !auth.can('loans.view_all'))
 const lectorParams = computed(() => isLectorMode.value ? { user_id: auth.user?.id } : {})
 
+const isReadOnlyReport = computed(() => {
+  return reportModal.loan?.book?.status === 'Mantenimiento'
+})
+
 function formatDate(d) {
   if (!d) return '—'
+  // Si es solo fecha (YYYY-MM-DD), lo parseamos como local para evitar desfase de zona horaria
+  if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
+    const [y, m, day] = d.split('-').map(Number)
+    return new Date(y, m - 1, day).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })
+  }
   return new Date(d).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
@@ -311,7 +337,18 @@ function handleFileChange(e) {
   }
 }
 
-onMounted(() => fetchLoans(1, lectorParams.value))
+onMounted(() => {
+  // Manejar parámetros de consulta (Dashboard quick links)
+  if (route.query.status) {
+    filters.status = route.query.status
+  }
+
+  fetchLoans(1, lectorParams.value)
+
+  if (route.query.action === 'new' && auth.can('loans.manage')) {
+    handleOpenCreate()
+  }
+})
 </script>
 
 <style scoped>

@@ -22,7 +22,7 @@ class RoleController extends Controller
      */
     public function permissions(): JsonResponse
     {
-        return response()->json(Permission::orderBy('name')->get());
+        return response()->json(Permission::orderBy('id', 'desc')->get());
     }
 
     /**

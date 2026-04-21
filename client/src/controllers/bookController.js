@@ -1,4 +1,4 @@
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, watch } from 'vue'
 import { bookRepository } from '@/repositories/bookRepository'
 import { glpiService } from '@/services/glpiService'
 import { useToast } from 'vue-toastification'
@@ -42,13 +42,19 @@ export function useBookController() {
     errors: {}
   })
 
+  // ── Paginación Local ────────────────────────────────────────────────
+  const currentPage = ref(1)
+  const itemsPerPage = 10
+
   // ── Listar ──────────────────────────────────────────────────────────
   async function fetchBooks() {
     loading.value = true
     error.value   = null
     try {
-      // Pedimos todos para filtrado local instantáneo
-      books.value = await bookRepository.getAll({ per_page: 'all' })
+      // Pedimos TODOS para filtrar y paginar localmente (mejor UX y menos carga buscador)
+      const res = await bookRepository.getAll({ per_page: 'all' })
+      // Si recibimos array directo (Collection) o paginado (data: [])
+      books.value = Array.isArray(res) ? { data: res } : res
     } catch (err) {
       error.value = 'Error al cargar los libros.'
       toast.error('No se pudieron cargar los libros.')
@@ -57,7 +63,7 @@ export function useBookController() {
     }
   }
 
-  // Filtrado reactivo en el cliente para máxima fluidez
+  // Filtrado reactivo local
   const filteredBooks = computed(() => {
     const data = books.value?.data ?? []
     if (!data.length) return []
@@ -71,11 +77,25 @@ export function useBookController() {
       const matchAuthor = !filters.author || author.toLowerCase().includes(filters.author.toLowerCase())
       const matchIsbn = !filters.isbn || isbn.toLowerCase().includes(filters.isbn.toLowerCase())
       const matchGenre = !filters.genre_id || book.genre_id == filters.genre_id
+      const matchPublisher = !filters.publisher_id || book.publisher_id == filters.publisher_id
       const matchStatus = !filters.status || book.status === filters.status
       
-      return matchTitle && matchAuthor && matchIsbn && matchGenre && matchStatus
+      return matchTitle && matchAuthor && matchIsbn && matchGenre && matchPublisher && matchStatus
     })
   })
+
+  // Paginación local sobre el resultado filtrado
+  const paginatedBooks = computed(() => {
+    const start = (currentPage.value - 1) * itemsPerPage
+    return filteredBooks.value.slice(start, start + itemsPerPage)
+  })
+
+  const totalPages = computed(() => Math.ceil(filteredBooks.value.length / itemsPerPage))
+
+  // Al cambiar filtros, volvemos a la página 1
+  watch(filters, () => {
+    currentPage.value = 1
+  }, { deep: true })
 
   async function fetchMasters() {
     try {
@@ -83,8 +103,8 @@ export function useBookController() {
         glpiService.listGenres(),
         glpiService.listPublishers()
       ])
-      genres.value     = resG.data
-      publishers.value = resP.data
+      genres.value     = [{ id: '', name: 'Cualquier género' }, ...resG.data]
+      publishers.value = [{ id: '', name: 'Cualquier editorial' }, ...resP.data]
     } catch (err) {
       console.error('Error fetching masters:', err)
     }
@@ -168,7 +188,16 @@ export function useBookController() {
   // ── Reportar Incidencia ───────────────────────────────────────────────
   function openReportModal(book) {
     reportModal.book = book
-    reportModal.form = { priority: 'Media', description: '', image: null }
+    // Si el libro está en mantenimiento, cargar datos del reporte existente (solo lectura)
+    if (book.status === 'Mantenimiento' && book.latest_report) {
+      reportModal.form = { 
+        priority: book.latest_report.priority || 'Media', 
+        description: book.latest_report.description || '', 
+        image: null 
+      }
+    } else {
+      reportModal.form = { priority: 'Media', description: '', image: null }
+    }
     reportModal.errors = {}
     reportModal.visible = true
   }
@@ -188,7 +217,7 @@ export function useBookController() {
 
     try {
       await glpiService.createReport(formData)
-      toast.success('Incidencia reportada correctamente en GLPI.')
+      toast.success('Gracias por reportar esta incidencia, por favor acerquese a devolver el libro para ayudarlo con su problema')
       reportModal.visible = false
       await fetchBooks()
     } catch (err) {
@@ -203,7 +232,8 @@ export function useBookController() {
   }
 
   return {
-    books, filteredBooks, genres, publishers, loading, error, filters,
+    books, filteredBooks, paginatedBooks, currentPage, totalPages,
+    genres, publishers, loading, error, filters,
     modal, deleteConfirm, reportModal,
     fetchBooks, fetchMasters, openCreate, openEdit, saveBook,
     confirmDelete, deleteBook, openReportModal, submitReport,
