@@ -118,13 +118,13 @@
             <RouterLink v-if="auth.can('books.manage')" to="/books" class="quick-link">
               <font-awesome-icon icon="book" /><span>Libros</span>
             </RouterLink>
-            <RouterLink v-if="auth.can('loans.manage')" to="/loans" class="quick-link">
+            <RouterLink v-if="auth.can('loans.manage')" to="/loans?action=new" class="quick-link">
               <font-awesome-icon icon="clipboard-list" /><span>Nuevo Préstamo</span>
             </RouterLink>
             <RouterLink v-if="auth.can('users.manage')" to="/users" class="quick-link">
               <font-awesome-icon icon="users" /><span>Usuarios</span>
             </RouterLink>
-            <RouterLink v-if="auth.can('loans.view_own')" to="/loans" class="quick-link">
+            <RouterLink v-if="auth.can('loans.view_own')" to="/loans?status=Activo" class="quick-link">
               <font-awesome-icon icon="clipboard-list" /><span>Mis Préstamos</span>
             </RouterLink>
           </div>
@@ -203,6 +203,11 @@ const loansToShow = computed(() => activeLoans.value)
 
 function formatDate(dateStr) {
   if (!dateStr) return '—'
+  // Si es solo fecha (YYYY-MM-DD), lo parseamos como local para evitar desfase de zona horaria
+  if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    const [y, m, day] = dateStr.split('-').map(Number)
+    return new Date(y, m - 1, day).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })
+  }
   return new Date(dateStr).toLocaleDateString('es-PE', {
     day: '2-digit', month: 'short', year: 'numeric',
   })

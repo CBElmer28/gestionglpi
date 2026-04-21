@@ -56,6 +56,15 @@
             />
           </div>
 
+          <div class="filter-group">
+            <label class="filter-label">Editorial</label>
+            <BaseCombobox 
+              v-model="filters.publisher_id"
+              :options="publishers"
+              placeholder="Cualquier editorial"
+            />
+          </div>
+
           <div class="filter-group" style="width: 200px;">
             <label class="filter-label">Estado</label>
             <BaseCombobox 
@@ -74,7 +83,7 @@
         <div class="spinner spinner-lg"></div>
       </div>
 
-      <div v-else-if="!bookList.length" class="empty-state">
+      <div v-else-if="!filteredBooks.length" class="empty-state">
         <div class="empty-state-icon">
           <font-awesome-icon icon="book" />
         </div>
@@ -97,7 +106,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="book in bookList" :key="book.id">
+            <tr v-for="book in paginatedBooks" :key="book.id">
               <td style="color:var(--c-text-muted);font-size:.8rem">{{ book.id }}</td>
               <td>
                 <div style="font-weight:600">{{ book.title }}</div>
@@ -115,22 +124,22 @@
               </td>
               <td v-if="!auth.isLector">
                 <div class="table-actions">
-                  <button class="btn btn-ghost btn-icon" @click="openEdit(book)" title="Editar">
+                  <button class="btn btn-icon btn-action-edit" @click="openEdit(book)" title="Editar información del libro">
                     <font-awesome-icon icon="edit" />
                   </button>
                   <button
-                    class="btn btn-ghost btn-icon"
-                    :class="{ 'text-warning': book.status === 'Mantenimiento' }"
+                    class="btn btn-icon"
+                    :class="book.status === 'Mantenimiento' ? 'btn-action-info' : 'btn-action-report'"
                     @click="openReportModal(book)"
-                    title="Reportar Daño / Ver Info"
+                    :title="book.status === 'Mantenimiento' ? 'Ver detalles de incidencia' : 'Reportar daño o problema'"
                   >
-                    <font-awesome-icon :icon="book.status === 'Mantenimiento' ? 'exclamation-circle' : 'exclamation-triangle'" />
+                    <font-awesome-icon :icon="book.status === 'Mantenimiento' ? 'info-circle' : 'exclamation-triangle'" />
                   </button>
                   <button
                     v-if="auth.isAdmin"
-                    class="btn btn-ghost btn-icon"
+                    class="btn btn-icon btn-action-delete"
                     @click="confirmDelete(book)"
-                    title="Eliminar"
+                    title="Eliminar libro permanentemente"
                   >
                     <font-awesome-icon icon="trash-alt" />
                   </button>
@@ -141,9 +150,20 @@
         </table>
       </div>
 
+      <!-- Paginación -->
+      <div v-if="totalPages > 1" class="pagination">
+        <button class="btn btn-ghost btn-sm" :disabled="currentPage === 1" @click="currentPage--">
+          <font-awesome-icon icon="chevron-left" /> Anterior
+        </button>
+        <span style="font-size:.85rem;color:var(--c-text-secondary)">Página {{ currentPage }} de {{ totalPages }}</span>
+        <button class="btn btn-ghost btn-sm" :disabled="currentPage === totalPages" @click="currentPage++">
+          Siguiente <font-awesome-icon icon="chevron-right" />
+        </button>
+      </div>
+
       <!-- Información de resultados -->
       <div v-if="filteredBooks.length > 0" class="table-info">
-        Mostrando {{ filteredBooks.length }} libros de un total de {{ books?.total || 0 }}
+        Mostrando {{ paginatedBooks.length }} libros de un total de {{ filteredBooks.length }} (Catálogo completo: {{ books?.data?.length || 0 }})
       </div>
     </div>
 
@@ -179,26 +199,29 @@
               <span v-if="modal.errors.isbn" class="form-error">{{ modal.errors.isbn[0] }}</span>
             </div>
             <div class="form-group">
-              <label class="form-label">Edición</label>
-              <input v-model="modal.form.edition" type="text" class="form-control" placeholder="Ej: 2da Edición" />
+              <label class="form-label">Edición/Año *</label>
+              <input v-model="modal.form.edition" type="text" class="form-control" placeholder="Ej: 2da Edición / 2024" />
+              <span v-if="modal.errors.edition" class="form-error">{{ modal.errors.edition[0] }}</span>
             </div>
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label">Género</label>
+              <label class="form-label">Género *</label>
               <BaseCombobox 
                 v-model="modal.form.genre_id"
-                :options="genres"
+                :options="genres.filter(g => g.id !== '')"
                 placeholder="Seleccione un género..."
               />
+              <span v-if="modal.errors.genre_id" class="form-error">{{ modal.errors.genre_id[0] }}</span>
             </div>
             <div class="form-group">
-              <label class="form-label">Editorial</label>
+              <label class="form-label">Editorial *</label>
               <BaseCombobox 
                 v-model="modal.form.publisher_id"
-                :options="publishers"
+                :options="publishers.filter(p => p.id !== '')"
                 placeholder="Seleccione una editorial..."
               />
+              <span v-if="modal.errors.publisher_id" class="form-error">{{ modal.errors.publisher_id[0] }}</span>
             </div>
           </div>
           <div class="form-row">
@@ -257,7 +280,8 @@
       <div id="modal-report" class="modal" style="max-width:500px">
         <div class="modal-header">
           <h3 class="modal-title">
-            <font-awesome-icon icon="exclamation-triangle" /> Reportar Incidencia
+            <font-awesome-icon :icon="isReadOnlyReport ? 'info-circle' : 'exclamation-triangle'" />
+            {{ isReadOnlyReport ? 'Detalles de Incidencia' : 'Reportar Incidencia' }}
           </h3>
           <button class="btn btn-ghost btn-icon" @click="reportModal.visible = false">
             <font-awesome-icon icon="times" />
@@ -275,6 +299,7 @@
               v-model="reportModal.form.priority"
               :options="priorityOptions"
               placeholder="Seleccione prioridad..."
+              :disabled="isReadOnlyReport"
             />
           </div>
 
@@ -285,20 +310,26 @@
               class="form-control"
               rows="4"
               placeholder="Ej: El libro tiene varias hojas sueltas y la portada dañada..."
+              :disabled="isReadOnlyReport"
             ></textarea>
             <span v-if="reportModal.errors.description" class="form-error">{{ reportModal.errors.description[0] }}</span>
           </div>
 
-          <div class="form-group">
+          <div class="form-group" v-if="!isReadOnlyReport">
             <label class="form-label">Evidencia Fotográfica (Opcional)</label>
             <input type="file" @change="handleFileChange" accept="image/jpeg,image/png,image/webp" class="form-control" />
             <p style="font-size:.75rem;color:var(--c-text-muted);margin-top:4px">Máximo 5MB. Formatos: JPG, PNG, WEBP.</p>
             <span v-if="reportModal.errors.image" class="form-error">{{ reportModal.errors.image[0] }}</span>
           </div>
+
+          <div v-if="isReadOnlyReport && reportModal.book?.latest_report?.glpi_ticket_id" style="margin-top:var(--sp-4);padding:var(--sp-2);background:var(--c-bg-page);border:1px solid var(--c-border-light);border-radius:var(--radius-sm);font-size:.8rem">
+            <div style="font-weight:600;color:var(--c-text-muted);text-transform:uppercase;font-size:0.7rem;margin-bottom:2px">Información de GLPI</div>
+            <div>Ticket ID: <span style="font-weight:600">#{{ reportModal.book.latest_report.glpi_ticket_id }}</span></div>
+          </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-ghost" @click="reportModal.visible = false">Cancelar</button>
-          <button class="btn btn-warning" @click="submitReport" :disabled="reportModal.submitting">
+          <button class="btn btn-ghost" @click="reportModal.visible = false">Cerrar</button>
+          <button class="btn btn-warning" v-if="!isReadOnlyReport" @click="submitReport" :disabled="reportModal.submitting">
             <span v-if="reportModal.submitting" class="spinner"></span>
             <span v-else>Enviar a GLPI</span>
           </button>
@@ -319,14 +350,18 @@ import BaseCombobox from '@/components/common/BaseCombobox.vue'
 const toast = useToast()
 const auth = useAuthStore()
 const {
-  books, filteredBooks, genres, publishers, loading, filters,
+  books, filteredBooks, paginatedBooks, currentPage, totalPages,
+  genres, publishers, loading, filters,
   modal, deleteConfirm, reportModal,
   fetchBooks, fetchMasters, openCreate, openEdit, saveBook,
   confirmDelete, deleteBook, openReportModal, submitReport,
 } = useBookController()
 
 const syncing = ref(false)
-const bookList = computed(() => filteredBooks.value)
+
+const isReadOnlyReport = computed(() => {
+  return reportModal.book?.status === 'Mantenimiento' && !!reportModal.book?.latest_report
+})
 
 const bookStatuses = [
   { id: '', name: 'Cualquier estado' },
@@ -416,10 +451,13 @@ onMounted(async () => {
   padding-left: 36px;
 }
 
-.table-actions {
-  display: flex;
-  gap: var(--sp-1);
-  justify-content: flex-end;
+.pagination  { 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  gap: var(--sp-5); 
+  padding: var(--sp-4) var(--sp-6); 
+  border-top: 1px solid var(--c-border-light); 
 }
 
 .table-info {

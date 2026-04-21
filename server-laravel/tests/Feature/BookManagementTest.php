@@ -51,6 +51,7 @@ class BookManagementTest extends TestCase
             'isbn' => '1234567890',
             'title' => 'Libro de Prueba',
             'author' => 'Autor Test',
+            'edition' => '1ra Edición',
             'genre_id' => 1,
             'publisher_id' => 1,
             'status' => 'Disponible'
@@ -78,9 +79,10 @@ class BookManagementTest extends TestCase
             'isbn' => '999',
             'title' => 'ABorrar',
             'author' => 'A',
+            'edition' => 'X',
             'genre_id' => 1,
             'publisher_id' => 1,
-            'status' => 1
+            'status' => 'Disponible'
         ]);
 
         $response = $this->actingAs($this->admin)
@@ -101,6 +103,6 @@ class BookManagementTest extends TestCase
                          ->postJson('/api/books', []); // Envío vacío
 
         $response->assertStatus(422)
-                 ->assertJsonValidationErrors(['isbn', 'title', 'author']);
+                 ->assertJsonValidationErrors(['isbn', 'title', 'author', 'edition', 'genre_id', 'publisher_id']);
     }
 }

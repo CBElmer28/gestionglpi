@@ -29,32 +29,45 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // ── Libros ────────────────────────────────────────────────────────────
     Route::get('/books/search', [BookController::class, 'search']);
-    Route::apiResource('books', BookController::class);
-
-    // ── Categorías ────────────────────────────────────────────────────────
+    Route::get('/books', [BookController::class, 'index']);
+    Route::get('/books/{id}', [BookController::class, 'show']);
+    
+    Route::middleware('permission:books.manage')->group(function () {
+        Route::post('/books', [BookController::class, 'store']);
+        Route::put('/books/{id}', [BookController::class, 'update']);
+        Route::delete('/books/{id}', [BookController::class, 'destroy']);
+    });
 
     // ── Préstamos ─────────────────────────────────────────────────────────
-    Route::put('/loans/{id}/return', [LoanController::class, 'returnLoan']);
-    Route::apiResource('loans', LoanController::class)->except(['update']);
+    Route::get('/loans', [LoanController::class, 'index']);
+    Route::get('/loans/{id}', [LoanController::class, 'show']);
+    
+    Route::middleware('permission:loans.manage')->group(function () {
+        Route::post('/loans', [LoanController::class, 'store']);
+        Route::put('/loans/{id}/return', [LoanController::class, 'returnLoan']);
+        Route::delete('/loans/{id}', [LoanController::class, 'destroy']);
+    });
 
-    // ── Usuarios ──────────────────────────────────────────────────────────
-    Route::apiResource('users', UserController::class);
+    // ── Usuarios y Roles (Privilegiados) ──────────────────────────────────
+    Route::middleware('permission:users.manage')->group(function () {
+        Route::apiResource('users', UserController::class);
+        Route::get('/roles',                   [RoleController::class, 'index']);
+        Route::get('/permissions',             [RoleController::class, 'permissions']);
+        Route::post('/roles/{id}/permissions',  [RoleController::class, 'syncPermissions']);
+    });
 
-    // ── Roles y Permisos ──────────────────────────────────────────────────
-    Route::get('/roles',                   [RoleController::class, 'index']);
-    Route::get('/permissions',             [RoleController::class, 'permissions']);
-    Route::post('/roles/{id}/permissions',  [RoleController::class, 'syncPermissions']);
-
-    // ── GLPI ──────────────────────────────────────────────────────────────
+    // ── GLPI (Administrativo) ─────────────────────────────────────────────
     Route::prefix('glpi')->group(function () {
         Route::get('/ping',            [GlpiController::class, 'ping']);
         Route::get('/books',           [GlpiController::class, 'listBooks']);
         Route::get('/genres',          [GlpiController::class, 'listGenres']);
         Route::get('/publishers',      [GlpiController::class, 'listPublishers']);
         Route::get('/tickets',         [GlpiController::class, 'listTickets']);
-        Route::post('/sync-book/{id}', [GlpiController::class, 'syncBook']);
-        Route::post('/sync-all',       [GlpiController::class, 'syncAll']);
-        Route::post('/create-report',  [GlpiController::class, 'createReport']);
+        
+        Route::middleware('permission:glpi.manage')->group(function () {
+            Route::post('/sync-book/{id}', [GlpiController::class, 'syncBook']);
+            Route::post('/sync-all',       [GlpiController::class, 'syncAll']);
+            Route::post('/create-report',  [GlpiController::class, 'createReport']);
+        });
     });
 });
-

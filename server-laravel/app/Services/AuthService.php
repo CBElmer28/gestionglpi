@@ -11,7 +11,8 @@ class AuthService
 {
     public function __construct(
         protected UserRepositoryInterface $userRepository,
-    ) {}
+    ) {
+    }
 
     /**
      * Autentica un usuario y devuelve un token Sanctum.
@@ -27,7 +28,7 @@ class AuthService
         // Cargar rol y permisos
         $user->load('role.permissions');
         $role = $user->role;
-        $permissionSlugs = ($role instanceof \App\Models\Role) ? $role->permissions->pluck('slug')->toArray() : [];
+        $permissionSlugs = ($role instanceof Role) ? $role->permissions->pluck('slug')->toArray() : [];
 
         // Revocar tokens anteriores
         $user->tokens()->delete();
@@ -36,12 +37,12 @@ class AuthService
 
         return [
             'success' => true,
-            'token'   => $token,
-            'user'    => [
-                'id'          => $user->id,
-                'name'        => $user->name,
-                'email'       => $user->email,
-                'role'        => ($user->role instanceof \App\Models\Role) ? $user->role->slug : $user->role,
+            'token' => $token,
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => ($user->role instanceof Role) ? $user->role->slug : $user->role,
                 'permissions' => $permissionSlugs,
             ],
         ];
@@ -61,24 +62,24 @@ class AuthService
     public function register(array $data): array
     {
         $lectorRole = Role::where('slug', 'lector')->first();
-        
+
         $data['password'] = Hash::make($data['password']);
-        $data['role_id']  = $lectorRole?->id;
+        $data['role_id'] = $lectorRole?->id;
 
         $user = $this->userRepository->create($data);
         $user->load('role.permissions');
         $permissionSlugs = $user->role ? $user->role->permissions->pluck('slug')->toArray() : [];
-        
+
         $token = $user->createToken('biblioteca-token', $permissionSlugs ?: ['lector'])->plainTextToken;
 
         return [
             'success' => true,
-            'token'   => $token,
-            'user'    => [
-                'id'          => $user->id,
-                'name'        => $user->name,
-                'email'       => $user->email,
-                'role'        => ($user->role instanceof \App\Models\Role) ? $user->role->slug : 'lector',
+            'token' => $token,
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => ($user->role instanceof Role) ? $user->role->slug : 'lector',
                 'permissions' => $permissionSlugs,
             ],
         ];

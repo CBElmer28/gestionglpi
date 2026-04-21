@@ -90,22 +90,24 @@ const containerRef = ref(null)
 
 // Sincronizar el searchTerm con el valor seleccionado inicialmente
 const syncSearchTerm = () => {
-  if (props.modelValue) {
+  if (props.modelValue !== null && props.modelValue !== undefined) {
     const selected = props.options.find(opt => opt[props.valueKey] === props.modelValue)
     if (selected) {
       searchTerm.value = selected[props.labelKey]
       return
     }
   }
-  // Si no hay valor o no se encuentra, perosearchTerm tiene algo y el dropdown está cerrado, 
-  // tal vez queramos limpiarlo si no coincide con nada.
+  // Si no hay valor o no se encuentra el label, no forzamos nada para permitir placeholder
 }
 
 watch(() => props.modelValue, syncSearchTerm, { immediate: true })
 watch(() => props.options, syncSearchTerm)
 
 const filteredOptions = computed(() => {
-  if (!searchTerm.value || (props.modelValue && searchTerm.value === getLabelByValue(props.modelValue))) {
+  const selectedLabel = getLabelByValue(props.modelValue)
+  // Si el campo está vacío o coincide exactamente con la etiqueta del valor seleccionado,
+  // mostramos todas las opciones para facilitar la navegación.
+  if (!searchTerm.value || searchTerm.value === selectedLabel) {
     return props.options
   }
   const s = searchTerm.value.toLowerCase()

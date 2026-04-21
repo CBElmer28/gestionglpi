@@ -104,7 +104,7 @@ class GlpiService
 
     /**
      * Mapea un ítem del resultado de búsqueda de GLPI a nuestra estructura de Libro.
-     * IDs: 45001:Título, 45002:Autor, 45003:ISBN, 45004:Sinopsis, 45005:Edición, 45006:Género, 45007:Estado, 45008:Editorial
+     * IDs: 45001:Título, 45002:Autor, 45003:ISBN, 45004:Sinopsis, 45005:Edición, 45006:Género, 31:Estado, 45008:Editorial
      */
     protected function mapSearchResultToBook(array $item): array
     {
@@ -117,7 +117,7 @@ class GlpiService
             'synopsis'  => isset($item[45004]) ? strip_tags((string) $item[45004]) : '',
             'edition'   => $item[45005] ?? '—',
             'genre'     => $item[45006] ?? '—',
-            'status_label' => $item[45007] ?? '—',
+            'status_label' => $item[31] ?? '—',
             'publisher' => $item[45008] ?? '—',
             'date_mod'  => $item[19]    ?? '',
         ];
@@ -133,7 +133,7 @@ class GlpiService
                 'criteria' => [
                     ['field' => 2, 'searchtype' => 'equals', 'value' => $glpiId]
                 ],
-                'forcedisplay' => [2, 19, 45001, 45002, 45003, 45004, 45005, 45006, 45007, 45008]
+                'forcedisplay' => [2, 19, 31, 45001, 45002, 45003, 45004, 45005, 45006, 45008]
             ];
 
             $response = $this->request('GET', "{$this->baseUrl}/search/{$this->bookItemtype}", ['query' => $query]);
@@ -157,7 +157,7 @@ class GlpiService
         try {
             $query = [
                 'range'        => '0-500',
-                'forcedisplay' => [2, 19, 45001, 45002, 45003, 45004, 45005, 45006, 45007, 45008]
+                'forcedisplay' => [2, 19, 31, 45001, 45002, 45003, 45004, 45005, 45006, 45008]
             ];
 
             $response = $this->request('GET', "{$this->baseUrl}/search/{$this->bookItemtype}", [
@@ -225,22 +225,18 @@ class GlpiService
     public function createBook(array $bookData): ?array
     {
         try {
-            $customFields = json_encode([
-                "1" => $bookData['title'] ?? '',
-                "2" => $bookData['author'] ?? '',
-                "3" => $bookData['isbn'] ?? '',
-                "4" => $bookData['synopsis'] ?? '',
-                "5" => $bookData['edition'] ?? '',
-                "6" => $bookData['glpi_genre_id'] ?? '',
-                "7" => $bookData['glpi_status_id'] ?? '',
-                "8" => $bookData['glpi_publisher_id'] ?? '',
-            ]);
-
             $payload = [
                 'input' => [
-                    'name'          => $bookData['title'] ?? 'Nuevo Libro',
-                    'custom_fields' => $customFields,
-                    'comment'       => "ISBN: " . ($bookData['isbn'] ?? '') . " | Sincronizado desde Sistema Biblioteca",
+                    'name'                => $bookData['title'] ?? 'Nuevo Libro',
+                    'states_id'           => $bookData['glpi_status_id'] ?? 1,
+                    'custom_titulo'       => $bookData['title'] ?? '',
+                    'custom_autor'        => $bookData['author'] ?? '',
+                    'custom_isbn'         => $bookData['isbn'] ?? '',
+                    'custom_sinopsis'     => $bookData['synopsis'] ?? '',
+                    'custom_edicion__ano' => $bookData['edition'] ?? '',
+                    'custom_genero'       => $bookData['glpi_genre_id'] ?? '',
+                    'custom_editorial'    => $bookData['glpi_publisher_id'] ?? '',
+                    'comment'             => "ISBN: " . ($bookData['isbn'] ?? '') . " | Sincronizado desde Sistema Biblioteca",
                 ],
             ];
 
@@ -267,23 +263,19 @@ class GlpiService
     public function updateBook(int $glpiId, array $bookData): bool
     {
         try {
-            $customFields = json_encode([
-                "1" => $bookData['title'] ?? '',
-                "2" => $bookData['author'] ?? '',
-                "3" => $bookData['isbn'] ?? '',
-                "4" => $bookData['synopsis'] ?? '',
-                "5" => $bookData['edition'] ?? '',
-                "6" => $bookData['glpi_genre_id'] ?? '',
-                "7" => $bookData['glpi_status_id'] ?? '',
-                "8" => $bookData['glpi_publisher_id'] ?? '',
-            ]);
-
             $payload = [
                 'input' => [
-                    'id'            => $glpiId,
-                    'name'          => ($bookData['title'] ?? '') . ' — ' . ($bookData['author'] ?? ''),
-                    'custom_fields' => $customFields,
-                    'comment'       => "ISBN: " . ($bookData['isbn'] ?? ''),
+                    'id'                  => $glpiId,
+                    'name'                => ($bookData['title'] ?? '') . ' — ' . ($bookData['author'] ?? ''),
+                    'states_id'           => $bookData['glpi_status_id'] ?? 1,
+                    'custom_titulo'       => $bookData['title'] ?? '',
+                    'custom_autor'        => $bookData['author'] ?? '',
+                    'custom_isbn'         => $bookData['isbn'] ?? '',
+                    'custom_sinopsis'     => $bookData['synopsis'] ?? '',
+                    'custom_edicion__ano' => $bookData['edition'] ?? '',
+                    'custom_genero'       => $bookData['glpi_genre_id'] ?? '',
+                    'custom_editorial'    => $bookData['glpi_publisher_id'] ?? '',
+                    'comment'             => "ISBN: " . ($bookData['isbn'] ?? ''),
                 ],
             ];
 
