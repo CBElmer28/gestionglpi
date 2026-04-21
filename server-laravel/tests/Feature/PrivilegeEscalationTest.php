@@ -1,92 +1,50 @@
 <?php
 
-namespace Tests\Feature;
-
 use App\Models\Role;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
 
-class PrivilegeEscalationTest extends TestCase
-{
-    use RefreshDatabase;
+beforeEach(function () {
+    $this->seed(RolesAndPermissionsSeeder::class);
 
-    protected User $admin;
-    protected User $bibliotecario;
-    protected User $lector;
+    $this->admin = User::factory()->create([
+        'role_id' => Role::where('slug', 'admin')->first()->id
+    ]);
+    $this->bibliotecario = User::factory()->create([
+        'role_id' => Role::where('slug', 'bibliotecario')->first()->id
+    ]);
+    $this->lector = User::factory()->create([
+        'role_id' => Role::where('slug', 'lector')->first()->id
+    ]);
+});
 
-    protected function setUp(): void
-    {
-        parent::setUp();
-        $this->seed(RolesAndPermissionsSeeder::class);
+test('a reader cannot access user management endpoints', function () {
+    $this->actingAs($this->lector)
+        ->getJson('/api/users')
+        ->assertStatus(403);
+});
 
-        $this->admin = User::factory()->create([
-            'role_id' => Role::where('slug', 'admin')->first()->id
-        ]);
-        $this->bibliotecario = User::factory()->create([
-            'role_id' => Role::where('slug', 'bibliotecario')->first()->id
-        ]);
-        $this->lector = User::factory()->create([
-            'role_id' => Role::where('slug', 'lector')->first()->id
-        ]);
-    }
+test('a librarian cannot access roles and permissions configuration', function () {
+    $this->actingAs($this->bibliotecario)
+        ->getJson('/api/roles')
+        ->assertStatus(403);
+});
 
-    /**
-     * Seguridad: Un Lector NO puede acceder a la lista de usuarios.
-     */
-    public function test_lector_cannot_access_user_management()
-    {
-        $response = $this->actingAs($this->lector)
-                         ->getJson('/api/users');
+test('unauthenticated users are blocked from protected routes (books)', function () {
+    $this->getJson('/api/books')
+        ->assertStatus(401);
+});
 
-        $response->assertStatus(403);
-    }
+test('a reader cannot trigger manual GLPI synchronization', function () {
+    $this->actingAs($this->lector)
+        ->postJson('/api/glpi/sync-all')
+        ->assertStatus(403);
+});
 
-    /**
-     * Seguridad: Un Bibliotecario NO puede gestionar roles y permisos.
-     */
-    public function test_bibliotecario_cannot_access_roles_config()
-    {
-        $response = $this->actingAs($this->bibliotecario)
-                         ->getJson('/api/roles');
-
-        $response->assertStatus(403);
-    }
-
-    /**
-     * Seguridad: Un usuario NO autenticado no puede acceder a nada protegido.
-     */
-    public function test_unauthenticated_user_cannot_access_books()
-    {
-        $response = $this->getJson('/api/books');
-
-        $response->assertStatus(401);
-    }
-
-    /**
-     * Seguridad: Un Lector NO puede forzar la sincronización de GLPI.
-     */
-    public function test_lector_cannot_sync_glpi()
-    {
-        $response = $this->actingAs($this->lector)
-                         ->postJson('/api/glpi/sync-all');
-
-        $response->assertStatus(403);
-    }
-
-    /**
-     * Seguridad: Verificación de exclusión de datos sensibles en la API.
-     */
-    public function test_api_does_not_expose_passwords()
-    {
-        $response = $this->actingAs($this->admin)
-                         ->getJson("/api/users/{$this->lector->id}");
-
-        $response->assertStatus(200);
-        
-        // El JSON no debe contener la clave 'password' ni el 'remember_token'
-        $response->assertJsonMissing(['password']);
-        $response->assertJsonMissing(['remember_token']);
-    }
-}
+test('api ensures sensitive data like passwords are not exposed in user details', function () {
+    $this->actingAs($this->admin)
+        ->getJson("/api/users/{$this->lector->id}")
+        ->assertStatus(200)
+        ->assertJsonMissing(['password'])
+        ->assertJsonMissing(['remember_token']);
+});

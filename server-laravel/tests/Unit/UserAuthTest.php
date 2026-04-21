@@ -1,45 +1,28 @@
 <?php
 
-namespace Tests\Unit;
-
-use Tests\TestCase;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 
-class UserAuthTest extends TestCase
-{
-    use RefreshDatabase;
+test('password is encrypted and verifiable', function () {
+    $password = 'secret-123';
+    
+    $user = User::factory()->create([
+        'password' => $password
+    ]);
 
-    /**
-     * Verifica que la contraseña se encripte correctamente.
-     */
-    public function test_password_is_hashed()
-    {
-        $password = 'secret-123';
-        
-        $user = User::factory()->create([
-            'password' => $password
-        ]);
+    // La contraseña en la BD no debe ser igual a la de texto plano
+    expect($user->password)->not->toBe($password);
+    
+    // Pero el Hash debe validarla correctamente
+    expect(Hash::check($password, $user->password))->toBeTrue();
+});
 
-        // La contraseña en la BD no debe ser igual a la de texto plano
-        $this->assertNotEquals($password, $user->password);
-        
-        // Pero el Hash debe validarla correctamente
-        $this->assertTrue(Hash::check($password, $user->password));
-    }
+test('user roles logic detects admin and specific roles', function () {
+    $admin = User::factory()->make(['role' => 'admin']);
+    $bibliotecario = User::factory()->make(['role' => 'bibliotecario']);
 
-    /**
-     * Verifica los roles asignados.
-     */
-    public function test_user_roles_logic()
-    {
-        $admin = User::factory()->make(['role' => 'admin']);
-        $bibliotecario = User::factory()->make(['role' => 'bibliotecario']);
-
-        $this->assertTrue($admin->isAdmin());
-        $this->assertTrue($admin->hasRole('admin'));
-        $this->assertFalse($bibliotecario->isAdmin());
-        $this->assertTrue($bibliotecario->hasRole('bibliotecario'));
-    }
-}
+    expect($admin->isAdmin())->toBeTrue()
+        ->and($admin->hasRole('admin'))->toBeTrue()
+        ->and($bibliotecario->isAdmin())->toBeFalse()
+        ->and($bibliotecario->hasRole('bibliotecario'))->toBeTrue();
+});
