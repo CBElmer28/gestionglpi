@@ -72,43 +72,44 @@ El frontend utiliza **Vitest** para pruebas unitarias y de componentes.
 
 ---
 
-## 📊 Dashboard de Reportes Gráficos (Allure)
+## 📊 Dashboard de Reportes Gráficos (ReadOut QA)
 
-Hemos integrado **Allure Framework** para proporcionar una visión visual y profesional de la calidad del proyecto.
+Hemos integrado **Allure Framework** con un branding personalizado ("ReadOut QA") para proporcionar una visión visual y profesional de la calidad del proyecto. El sistema consolida actualmente **68 pruebas automáticas**.
 
-### 1. Requisitos
-Necesitas tener instalado el Allure CLI en tu máquina:
+### 1. Composición de la Suite (68 Tests)
+| Módulo | Cantidad | Tecnología | Descripción |
+| :--- | :--- | :--- | :--- |
+| **Backend** | 40 | Pest PHP | Seguridad, Rendimiento, Lógica de Negocio y Caja Blanca. |
+| **Frontend Unit** | 24 | Vitest | Store (Pinia), Router, Servicios y Controladores. |
+| **Frontend E2E** | 4 | Playwright | Flujos críticos, Sincronización GLPI y Reporte de Incidencias. |
+
+### 2. Preparación de Allure
+Tu máquina necesita el CLI de Allure para procesar los resultados:
+- **NPM (Recomendado)**: `npm install -g allure-commandline`
 - **Windows (Scoop)**: `scoop install allure`
-- **NPM (Global)**: `npm install -g allure-commandline`
 
-### 2. Cómo generar el reporte consolidado
-Sigue estos pasos para ver el dashboard con los resultados de todo el proyecto:
+### 3. Ejecución y Consolidación (Orquestador)
+Para generar el reporte con **Historial y Tendencias**, no uses el comando base de Allure. Usa el orquestador automático que une los resultados de Laravel y Vue:
 
-1. **Ejecutar todos los tests**:
+1. **Ejecutar la suite completa**:
    ```bash
-   # Backend
-   cd server-laravel && php artisan test
-   # Frontend & E2E
-   cd ../client && npm run test && npm run test:e2e
+   # En /server-laravel
+   php artisan test
+   # En /client
+   npm run test && npx playwright test
    ```
 
-2. **Generar el reporte con Historial y Tendencias**:
-   Para mantener un histórico de tus pruebas y ver gráficas de tendencia (Trends), usa el orquestador automático desde la raíz del proyecto:
+2. **Generar y Abrir el Reporte**:
+   Desde la **raíz del proyecto**:
    ```bash
    node generate-allure-report.js
-   ```
-
-3. **Ver el reporte**:
-   El comando anterior generará el reporte en la carpeta `allure-report`. Para abrirlo en tu navegador:
-   ```bash
    npx allure-commandline open
    ```
 
-### 3. Qué verás en Allure
-- **Trends**: Gráficas históricas de cómo evoluciona la calidad del código.
-- **Environment**: Información técnica del sistema (OS, Node, Versiones).
-- **Graphs**: Estadísticas de éxito/fallo y duración.
+### 4. Qué verás en Allure
+- **QA Trends**: Gráficas históricas de éxito/fallo y duración.
 - **Attachments**: Capturas de pantalla automáticas en fallos de Playwright.
+- **Environment**: Información técnica del sistema (OS, Node, Versiones).
 
 ---
-**El sistema ReadOut está totalmente verificado y visualmente documentado.**
+**El sistema ReadOut está totalmente verificado con una cobertura integral y visualmente documentado.**
