@@ -4,6 +4,11 @@
          bootstrap="vendor/autoload.php"
          colors="true"
 >
+    <extensions>
+        <bootstrap class="Qameta\Allure\PHPUnit\AllureExtension">
+            <parameter name="outputDirectory" value="allure-results"/>
+        </bootstrap>
+    </extensions>
     <testsuites>
         <testsuite name="Unit">
             <directory>tests/Unit</directory>

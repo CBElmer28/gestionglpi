@@ -40,7 +40,7 @@ class RolesAndPermissionsSeeder extends Seeder
         $admin = Role::updateOrCreate(['slug' => 'admin'], ['name' => 'Administrador']);
         $admin->permissions()->sync(Permission::all());
 
-        // Bibliotecario: Casi todo menos usuarios y GLPI config?
+        // Bibliotecario
         $biblio = Role::updateOrCreate(['slug' => 'bibliotecario'], ['name' => 'Bibliotecario']);
         $biblio->permissions()->sync(
             Permission::whereIn('slug', [
@@ -49,17 +49,12 @@ class RolesAndPermissionsSeeder extends Seeder
             ])->get()
         );
 
-        // Lector: Solo sus préstamos y reportar
+        // Lector
         $lector = Role::updateOrCreate(['slug' => 'lector'], ['name' => 'Lector']);
         $lector->permissions()->sync(
             Permission::whereIn('slug', [
                 'loans.view_own', 'incidents.report'
             ])->get()
         );
-
-        // 3. Migrar usuarios existentes
-        User::where('role', 'admin')->update(['role_id' => $admin->id]);
-        User::where('role', 'bibliotecario')->update(['role_id' => $biblio->id]);
-        User::where('role', 'lector')->update(['role_id' => $lector->id]);
     }
 }
