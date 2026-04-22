@@ -71,4 +71,44 @@ El frontend utiliza **Vitest** para pruebas unitarias y de componentes.
 - Basadas en el análisis del flujo de control de funciones clave del controlador de libros y préstamos, garantizando que cada "if/else" y "catch" haya sido probado al menos una vez.
 
 ---
-**El sistema ReadOut está totalmente verificado y listo para su uso.**
+
+## 📊 Dashboard de Reportes Gráficos (Allure)
+
+Hemos integrado **Allure Framework** para proporcionar una visión visual y profesional de la calidad del proyecto.
+
+### 1. Requisitos
+Necesitas tener instalado el Allure CLI en tu máquina:
+- **Windows (Scoop)**: `scoop install allure`
+- **NPM (Global)**: `npm install -g allure-commandline`
+
+### 2. Cómo generar el reporte consolidado
+Sigue estos pasos para ver el dashboard con los resultados de todo el proyecto:
+
+1. **Ejecutar todos los tests**:
+   ```bash
+   # Backend
+   cd server-laravel && php artisan test
+   # Frontend & E2E
+   cd ../client && npm run test && npm run test:e2e
+   ```
+
+2. **Generar el reporte con Historial y Tendencias**:
+   Para mantener un histórico de tus pruebas y ver gráficas de tendencia (Trends), usa el orquestador automático desde la raíz del proyecto:
+   ```bash
+   node generate-allure-report.js
+   ```
+
+3. **Ver el reporte**:
+   El comando anterior generará el reporte en la carpeta `allure-report`. Para abrirlo en tu navegador:
+   ```bash
+   npx allure-commandline open
+   ```
+
+### 3. Qué verás en Allure
+- **Trends**: Gráficas históricas de cómo evoluciona la calidad del código.
+- **Environment**: Información técnica del sistema (OS, Node, Versiones).
+- **Graphs**: Estadísticas de éxito/fallo y duración.
+- **Attachments**: Capturas de pantalla automáticas en fallos de Playwright.
+
+---
+**El sistema ReadOut está totalmente verificado y visualmente documentado.**

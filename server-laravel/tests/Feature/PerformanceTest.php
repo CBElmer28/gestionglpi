@@ -9,15 +9,24 @@ use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
 use App\Services\GlpiService;
+use Qameta\Allure\Allure;
+use Qameta\Allure\Model\Severity;
 
 beforeEach(function () {
     $this->seed(RolesAndPermissionsSeeder::class);
     $this->admin = User::factory()->create([
         'role_id' => Role::where('slug', 'admin')->first()->id
     ]);
+
+    Allure::epic('Calidad y Rendimiento');
+    Allure::feature('Benchmarking de Eficiencia');
 });
 
 test('memory usage profiling under load', function () {
+    Allure::story('Perfilado de Memoria');
+    Allure::description('Mide el impacto en el consumo de memoria RAM al procesar grandes volúmenes de datos hidratados desde la base de datos.');
+    Allure::severity(Severity::normal());
+
     // 1. Inyectar 1,000 libros
     $genre = Genre::factory()->create();
     $publisher = Publisher::factory()->create();
@@ -41,12 +50,14 @@ test('memory usage profiling under load', function () {
     echo " - Memoria utilizada por la petición: {$consumed} MB\n";
     echo " - Pico de memoria del script: {$peakMb} MB\n";
 
-    // Un pico de > 128MB (límite común de PHP) indicaría un riesgo.
     expect($peakMb)->toBeLessThan(128);
 });
 
 test('glpi service internal processing latency benchmark', function () {
-    // Forzar limpieza de caché para medir el ciclo completo (incluyendo initSession)
+    Allure::story('Latencia de Servicios Externos');
+    Allure::description('Mide el tiempo de respuesta interno del servicio GLPI, incluyendo el parseo de respuestas y gestión de sesiones.');
+    Allure::severity(Severity::critical());
+
     Cache::forget('glpi_session_token');
 
     Http::fake([
@@ -65,6 +76,5 @@ test('glpi service internal processing latency benchmark', function () {
     echo "\n[PERFORMANCE] Latencia de Procesamiento GLPI (Interna + Mock):\n";
     echo " - Tiempo total (init + search + mapping): {$totalTimeMs} ms\n";
 
-    // Debería ser muy rápido (< 500ms incluso en entornos lentos)
     expect($totalTimeMs)->toBeLessThan(500);
 });

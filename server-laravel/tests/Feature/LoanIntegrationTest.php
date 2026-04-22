@@ -10,14 +10,14 @@ use App\Models\User;
 use Carbon\Carbon;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Support\Facades\Http;
+use Qameta\Allure\Allure;
+use Qameta\Allure\Model\Severity;
 
 beforeEach(function () {
-    // 1. Configurar Roles y Permisos
     $this->seed(RolesAndPermissionsSeeder::class);
     $role = Role::where('slug', 'bibliotecario')->first();
     $this->bibliotecario = User::factory()->create(['role_id' => $role->id]);
 
-    // 2. Mock de GLPI (Integración externa simulada)
     Http::fake([
         '*/initSession' => Http::response(['session_token' => 'fake-token'], 200),
         '*/LibrosAsset/*' => Http::response(['id' => 123, 'message' => 'Sincronizado'], 201),
@@ -25,7 +25,6 @@ beforeEach(function () {
         'PUT */LibrosAsset/*' => Http::response(['message' => 'Updated'], 200),
     ]);
 
-    // 3. Preparar datos maestros y libro
     $genre = Genre::factory()->create();
     $publisher = Publisher::factory()->create();
     $this->book = Book::create([
@@ -37,9 +36,16 @@ beforeEach(function () {
         'publisher_id' => $publisher->id,
         'status' => 'Disponible'
     ]);
+
+    Allure::epic('Operaciones de Préstamos');
+    Allure::feature('Gestión Integrada de Préstamos');
 });
 
 test('loan creation coordinates book status update to "Prestado"', function () {
+    Allure::story('Registro de Préstamo Exitoso');
+    Allure::description('Verifica que al registrar un préstamo, el estado del libro cambie automáticamente de Disponible a Prestado.');
+    Allure::severity(Severity::critical());
+
     $payload = [
         'book_id' => $this->book->id,
         'user_name' => 'Juan Pérez',
@@ -51,19 +57,20 @@ test('loan creation coordinates book status update to "Prestado"', function () {
         ->postJson('/api/loans', $payload)
         ->assertStatus(201);
 
-    // 1. Integración con tabla Loans
     $this->assertDatabaseHas('loans', [
         'book_id' => $this->book->id,
         'user_name' => 'Juan Pérez',
         'status' => 'Activo'
     ]);
 
-    // 2. Integración con tabla Books (Cambio de estado en cascada)
     expect($this->book->refresh()->status)->toBe('Prestado');
 });
 
 test('returning a loan with an active incident sets book status to "Mantenimiento"', function () {
-    // 1. Preparar un préstamo activo
+    Allure::story('Gestión de Devoluciones con Incidencias');
+    Allure::description('Verifica que si un libro tiene una incidencia reportada (daños), su estado cambie a Mantenimiento al ser devuelto.');
+    Allure::severity(Severity::critical());
+
     $loan = Loan::create([
         'book_id' => $this->book->id,
         'user_name' => 'Ana Gómez',
@@ -72,7 +79,6 @@ test('returning a loan with an active incident sets book status to "Mantenimient
     ]);
     $this->book->update(['status' => 'Prestado']);
 
-    // 2. Simular que se reportó una incidencia durante el préstamo
     Report::create([
         'book_id' => $this->book->id,
         'technician_login' => 'soporte_biblioteca',
@@ -80,18 +86,19 @@ test('returning a loan with an active incident sets book status to "Mantenimient
         'description' => 'Páginas rotas detectadas por el lector',
     ]);
 
-    // 3. Acción: Registrar devolución vía API
     $this->actingAs($this->bibliotecario)
         ->putJson("/api/loans/{$loan->id}/return")
         ->assertStatus(200);
 
-    // Verificaciones
     expect($loan->refresh()->status)->toBe('Devuelto');
     expect($this->book->refresh()->status)->toBe('Mantenimiento');
 });
 
 test('enforces business rules by preventing loans of unavailable books', function () {
-    // 1. Poner el libro en mantenimiento
+    Allure::story('Validación de Disponibilidad');
+    Allure::description('Asegura que el sistema no permita prestar libros que no estén en estado Disponible.');
+    Allure::severity(Severity::normal());
+
     $this->book->update(['status' => 'Mantenimiento']);
 
     $payload = [
@@ -99,7 +106,6 @@ test('enforces business rules by preventing loans of unavailable books', functio
         'user_name' => 'Usuario Impaciente',
     ];
 
-    // Acción: Intentar prestar
     $this->actingAs($this->bibliotecario)
         ->postJson('/api/loans', $payload)
         ->assertStatus(409)
