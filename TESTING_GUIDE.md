@@ -25,18 +25,17 @@ Una vez instaladas las dependencias, ya puedes correr los comandos de la secció
 
 ## 🚀 Cómo ejecutar las pruebas
 
-### 1. Backend (Laravel)
-Todas las pruebas del backend se ejecutan en un entorno **SQLite en memoria** por defecto, por lo que son rápidas y seguras (no afectan a tu base de datos local).
+### 1. Backend (Laravel + Pest PHP)
+Todas las pruebas del backend se han migrado a **Pest PHP**. Pest ofrece una sintaxis mucho más limpia y expresiva. Se ejecutan en un entorno **SQLite en memoria** por defecto.
 
-| Tipo de Prueba | Descripción | Comando de Ejecución |
+| Tipo de Prueba | Descripción | Comando |
 | :--- | :--- | :--- |
 | **Global** | Ejecuta todos los tests del sistema | `php artisan test` |
-| **Caja Blanca** | Validación de lógica interna y caminos críticos | `php artisan test --filter SecurityValidationTest` |
-| **Integración** | Flujos completos de préstamos y GLPI | `php artisan test --filter LoanIntegrationTest` |
-| **Recuperación** | Pruebas de resiliencia y auto-curación | `php artisan test --filter RecoveryTest` |
-| **Seguridad** | Pruebas de IDOR y control de accesos (RBAC) | `php artisan test --filter PrivilegeEscalationTest` |
-| **Resistencia** | Carga masiva (2,000 registros) | `php artisan test --filter StressTest` |
-| **Rendimiento** | Benchmarking de memoria y latencia | `php artisan test --filter PerformanceTest` |
+| **Caja Blanca** | Validación de lógica interna | `php artisan test --filter SecurityValidation` |
+| **Seguridad** | Pruebas de IDOR y RBAC | `php artisan test --filter PrivilegeEscalation` |
+| **Resistencia** | Carga masiva (2,000 registros) | `php artisan test --filter Stress` |
+| **Rendimiento** | Benchmark de memoria y latencia | `php artisan test --filter Performance` |
+| **Watch Mode** | Ejecuta tests automáticamente al guardar | `.\vendor\bin\pest --watch` |
 
 ### 2. Frontend (Vue.js)
 El frontend utiliza **Vitest** para pruebas unitarias y de componentes.
