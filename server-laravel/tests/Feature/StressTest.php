@@ -6,25 +6,32 @@ use App\Models\Publisher;
 use App\Models\Role;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
+use Qameta\Allure\Allure;
+use Qameta\Allure\Model\Severity;
 
 beforeEach(function () {
     $this->seed(RolesAndPermissionsSeeder::class);
     $this->admin = User::factory()->create([
         'role_id' => Role::where('slug', 'admin')->first()->id
     ]);
+
+    Allure::epic('Calidad y Rendimiento');
+    Allure::feature('Pruebas de Estrés y Resistencia');
 });
 
 test('high volume data response time analysis (Stress Test)', function () {
+    Allure::story('Volumetría de Datos');
+    Allure::description('Evalúa la latencia de respuesta del sistema al manejar miles de registros de libros en el inventario.');
+    Allure::severity(Severity::minor());
+
     $count = 2000;
     
-    // Crear maestros para evitar fallos de FK
     $genre = Genre::factory()->create();
     $publisher = Publisher::factory()->create();
 
     echo "\n[STRESS] Iniciando inyección masiva de {$count} libros...\n";
     $startInject = microtime(true);
     
-    // Inyectar 2,000 libros (Entorno SQLite Protegido)
     Book::factory()->count($count)->create([
         'genre_id' => $genre->id,
         'publisher_id' => $publisher->id
@@ -33,7 +40,6 @@ test('high volume data response time analysis (Stress Test)', function () {
     $endInject = microtime(true);
     echo "[STRESS] Inyección completada en " . round($endInject - $startInject, 2) . "s\n";
 
-    // --- PRUEBA 1: Búsqueda Global ---
     $startSearch = microtime(true);
     $response = $this->actingAs($this->admin)
                      ->getJson('/api/books/search?q=Libro');
@@ -44,7 +50,6 @@ test('high volume data response time analysis (Stress Test)', function () {
 
     $response->assertStatus(200);
     
-    // --- PRUEBA 2: Paginación de Dashboard ---
     $startIndex = microtime(true);
     $response = $this->actingAs($this->admin)
                      ->getJson('/api/books?page=1');
@@ -55,11 +60,14 @@ test('high volume data response time analysis (Stress Test)', function () {
 
     $response->assertStatus(200);
     
-    // El tiempo de respuesta no debería exceder los 500ms en búsqueda simple
     expect($searchTime)->toBeLessThan(0.5);
 });
 
 test('sequential requests burst handling capacity', function () {
+    Allure::story('Ráfaga de Peticiones');
+    Allure::description('Verifica la capacidad del servidor para procesar ráfagas secuenciales de peticiones sin degradación de servicio.');
+    Allure::severity(Severity::normal());
+
     $requests = 50;
     echo "\n[STRESS] Iniciando ráfaga de {$requests} peticiones secuenciales...\n";
     

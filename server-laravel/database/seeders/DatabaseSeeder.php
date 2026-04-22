@@ -18,20 +18,20 @@ class DatabaseSeeder extends Seeder
         $adminRole = Role::where('slug', 'admin')->first();
         $biblioRole = Role::where('slug', 'bibliotecario')->first();
 
-        // 2. Datos Maestros (Necesarios para el catálogo)
-        Genre::firstOrCreate(['name' => 'Ficción'], ['glpi_id' => 101]);
-        Genre::firstOrCreate(['name' => 'Ciencia Ficción'], ['glpi_id' => 102]);
-        Genre::firstOrCreate(['name' => 'Drama'], ['glpi_id' => 103]);
+        // 2. Datos Maestros (Catálogo Base)
+        Genre::updateOrCreate(['glpi_id' => 101], ['name' => 'Terror / Suspenso']);
+        Genre::updateOrCreate(['glpi_id' => 102], ['name' => 'Fantasía / Ciencia Ficción']);
+        Genre::updateOrCreate(['glpi_id' => 103], ['name' => 'Drama / Realismo']);
 
-        Publisher::firstOrCreate(['name' => 'Alfaguara'], ['glpi_id' => 201]);
-        Publisher::firstOrCreate(['name' => 'Salamandra'], ['glpi_id' => 202]);
-        Publisher::firstOrCreate(['name' => 'Debolsillo'], ['glpi_id' => 203]);
+        Publisher::updateOrCreate(['glpi_id' => 201], ['name' => 'Alfaguara']);
+        Publisher::updateOrCreate(['glpi_id' => 202], ['name' => 'Salamandra']);
+        Publisher::updateOrCreate(['glpi_id' => 203], ['name' => 'Debolsillo']);
 
-        // 3. Usuarios
+        // 3. Usuarios Base
         User::firstOrCreate(
             ['email' => 'admin@biblioteca.com'],
             [
-                'name'     => 'Administrador',
+                'name'     => 'Administrador del Sistema',
                 'password' => Hash::make('admin123'),
                 'role_id'  => $adminRole->id,
             ]
@@ -40,7 +40,7 @@ class DatabaseSeeder extends Seeder
         User::firstOrCreate(
             ['email' => 'bibliotecario@biblioteca.com'],
             [
-                'name'     => 'Bibliotecario',
+                'name'     => 'Bibliotecario Principal',
                 'password' => Hash::make('biblio123'),
                 'role_id'  => $biblioRole->id,
             ]

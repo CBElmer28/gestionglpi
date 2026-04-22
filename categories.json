@@ -1,0 +1,27 @@
+[
+  {
+    "name": "🛑 Fallos Críticos de Lógica",
+    "matchedStatuses": ["failed"],
+    "messageRegex": ".*[Aa]ssert.*|.*expect.*|.*failed.*"
+  },
+  {
+    "name": "🧩 Problemas de Integración (GLPI/API)",
+    "matchedStatuses": ["failed", "broken"],
+    "messageRegex": ".*[Cc]onnection.*|.*[Hh]ttp.*|.*401.*|.*404.*|.*500.*|.*Unauthorized.*"
+  },
+  {
+    "name": "⚠️ Errores de Validación de Datos",
+    "matchedStatuses": ["failed"],
+    "messageRegex": ".*[Vv]alidation.*|.*422.*|.*Unprocessable.*"
+  },
+  {
+    "name": "⏰ Timeouts y Latencia Alta",
+    "matchedStatuses": ["broken"],
+    "messageRegex": ".*[Tt]imeout.*"
+  },
+  {
+    "name": "📝 Otros Defectos Detectados",
+    "matchedStatuses": ["failed", "broken"],
+    "messageRegex": ".*"
+  }
+]
