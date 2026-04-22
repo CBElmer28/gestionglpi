@@ -19,7 +19,6 @@ RUN apt-get update && apt-get install -y \
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # 3. Instalar extensiones de PHP requeridas
-# pdo_mysql es indispensable para conectarte a tu base de datos en AWS RDS
 RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
 
 # 4. Obtener Composer desde su imagen oficial
@@ -32,19 +31,23 @@ WORKDIR /var/www/html
 COPY . .
 
 # 7. Instalar las dependencias de Composer
-# Usamos --no-dev para no instalar herramientas de pruebas en producción y --optimize-autoloader para mayor velocidad
 RUN composer install --no-dev --optimize-autoloader
 
 # 8. Asignar los permisos correctos
-# Apache (www-data) necesita permisos de escritura en estas carpetas específicas para logs y caché
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# 9. Modificar el DocumentRoot de Apache
-# Por seguridad, el servidor web solo debe tener acceso a la carpeta /public, nunca a tu archivo .env o lógica
+# 9. Configurar VirtualHost y habilitar .htaccess (LA SOLUCIÓN AQUÍ)
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public
-RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
-RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
+
+RUN echo "<VirtualHost *:80>\n\
+    DocumentRoot ${APACHE_DOCUMENT_ROOT}\n\
+    <Directory ${APACHE_DOCUMENT_ROOT}>\n\
+    Options Indexes FollowSymLinks\n\
+    AllowOverride All\n\
+    Require all granted\n\
+    </Directory>\n\
+    </VirtualHost>" > /etc/apache2/sites-available/000-default.conf
 
 # 10. Exponer el puerto web
 EXPOSE 80

@@ -27,7 +27,7 @@ services:
     depends_on:
       - db
     ports:
-      - "80:80"
+      - "8000:80"
     env_file:
       - ./server-laravel/.env
     environment:
