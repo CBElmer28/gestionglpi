@@ -1,108 +1,78 @@
 <?php
 
-namespace Tests\Feature;
-
-use Tests\TestCase;
 use App\Models\User;
 use App\Models\Book;
 use App\Models\Genre;
 use App\Models\Publisher;
 use App\Models\Role;
 use Database\Seeders\RolesAndPermissionsSeeder;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 
-class BookManagementTest extends TestCase
-{
-    use RefreshDatabase;
+beforeEach(function () {
+    // Inicializar roles y permisos
+    $this->seed(RolesAndPermissionsSeeder::class);
+    $adminRole = Role::where('slug', 'admin')->first();
+    $biblioRole = Role::where('slug', 'bibliotecario')->first();
 
-    protected User $admin;
-    protected User $bibliotecario;
+    $this->admin = User::factory()->create(['role_id' => $adminRole->id]);
+    $this->bibliotecario = User::factory()->create(['role_id' => $biblioRole->id]);
+    
+    // Mock de GLPI para evitar llamadas reales durante el CRUD
+    Http::fake([
+        '*/initSession' => Http::response(['session_token' => 'fake'], 200),
+        '*/Glpi\CustomAsset\LibrosAsset*' => Http::response(['id' => 777], 201),
+    ]);
+    
+    // Crear datos maestros usando fábricas
+    $this->genre = Genre::factory()->create(['name' => 'Ficción']);
+    $this->publisher = Publisher::factory()->create(['name' => 'Alfaguara']);
+});
 
-    protected function setUp(): void
-    {
-        parent::setUp();
-        
-        // Inicializar roles y permisos
-        $this->seed(RolesAndPermissionsSeeder::class);
-        $adminRole = Role::where('slug', 'admin')->first();
-        $biblioRole = Role::where('slug', 'bibliotecario')->first();
+test('a librarian can create a book and it persists in the database', function () {
+    $bookData = [
+        'isbn' => '1234567890',
+        'title' => 'Libro de Prueba',
+        'author' => 'Autor Test',
+        'edition' => '1ra Edición',
+        'genre_id' => $this->genre->id,
+        'publisher_id' => $this->publisher->id,
+        'status' => 'Disponible'
+    ];
 
-        $this->admin = User::factory()->create(['role_id' => $adminRole->id]);
-        $this->bibliotecario = User::factory()->create(['role_id' => $biblioRole->id]);
-        
-        // Mock de GLPI para evitar llamadas reales durante el CRUD
-        Http::fake([
-            '*/initSession' => Http::response(['session_token' => 'fake'], 200),
-            '*/Glpi\CustomAsset\LibrosAsset*' => Http::response(['id' => 777], 201),
-        ]);
-        
-        // Crear datos maestros usando fábricas
-        Genre::factory()->create(['name' => 'Ficción']);
-        Publisher::factory()->create(['name' => 'Alfaguara']);
-    }
+    $this->actingAs($this->bibliotecario)
+        ->postJson('/api/books', $bookData)
+        ->assertStatus(201)
+        ->assertJsonPath('title', 'Libro de Prueba');
 
-    /**
-     * Prueba que un bibliotecario puede crear un libro y se guarda en BD.
-     */
-    public function test_can_create_book()
-    {
-        $bookData = [
-            'isbn' => '1234567890',
-            'title' => 'Libro de Prueba',
-            'author' => 'Autor Test',
-            'edition' => '1ra Edición',
-            'genre_id' => 1,
-            'publisher_id' => 1,
-            'status' => 'Disponible'
-        ];
+    // Verificar persistencia en MySQL
+    $this->assertDatabaseHas('books', [
+        'isbn' => '1234567890',
+        'title' => 'Libro de Prueba'
+    ]);
+});
 
-        $response = $this->actingAs($this->bibliotecario)
-                         ->postJson('/api/books', $bookData);
+test('an admin can delete a book and maintain integrity', function () {
+    $book = Book::create([
+        'isbn' => '999',
+        'title' => 'ABorrar',
+        'author' => 'A',
+        'edition' => 'X',
+        'genre_id' => $this->genre->id,
+        'publisher_id' => $this->publisher->id,
+        'status' => 'Disponible'
+    ]);
 
-        $response->assertStatus(201)
-                 ->assertJsonPath('title', 'Libro de Prueba');
+    $this->actingAs($this->admin)
+        ->deleteJson("/api/books/{$book->id}")
+        ->assertStatus(200);
 
-        // Verificar persistencia en MySQL (Caja Gris)
-        $this->assertDatabaseHas('books', [
-            'isbn' => '1234567890',
-            'title' => 'Libro de Prueba'
-        ]);
-    }
+    // Verificar que ya no está en la BD
+    $this->assertDatabaseMissing('books', ['id' => $book->id]);
+});
 
-    /**
-     * Prueba que al eliminar un libro no se rompa la integridad.
-     */
-    public function test_can_delete_book()
-    {
-        $book = Book::create([
-            'isbn' => '999',
-            'title' => 'ABorrar',
-            'author' => 'A',
-            'edition' => 'X',
-            'genre_id' => 1,
-            'publisher_id' => 1,
-            'status' => 'Disponible'
-        ]);
-
-        $response = $this->actingAs($this->admin)
-                         ->deleteJson("/api/books/{$book->id}");
-
-        $response->assertStatus(200);
-        
-        // Verificar que ya no está en la BD
-        $this->assertDatabaseMissing('books', ['id' => $book->id]);
-    }
-
-    /**
-     * Prueba la validación de campos obligatorios.
-     */
-    public function test_create_book_validation()
-    {
-        $response = $this->actingAs($this->bibliotecario)
-                         ->postJson('/api/books', []); // Envío vacío
-
-        $response->assertStatus(422)
-                 ->assertJsonValidationErrors(['isbn', 'title', 'author', 'edition', 'genre_id', 'publisher_id']);
-    }
-}
+test('book creation requires mandatory fields validation', function () {
+    $this->actingAs($this->bibliotecario)
+        ->postJson('/api/books', []) // Envío vacío
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['isbn', 'title', 'author', 'edition', 'genre_id', 'publisher_id']);
+});
