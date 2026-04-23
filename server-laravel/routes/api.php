@@ -65,9 +65,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/tickets',         [GlpiController::class, 'listTickets']);
         
         Route::middleware('permission:glpi.manage')->group(function () {
-            Route::post('/sync-book/{id}', [GlpiController::class, 'syncBook']);
-            Route::post('/sync-all',       [GlpiController::class, 'syncAll']);
-            Route::post('/create-report',  [GlpiController::class, 'createReport']);
+            Route::post('/sync-book/{id}',     [GlpiController::class, 'syncBook']);
+            Route::post('/sync-all',          [GlpiController::class, 'syncAll']);
+            Route::post('/sync-genres',       [GlpiController::class, 'syncGenres']);
+            Route::post('/sync-publishers',   [GlpiController::class, 'syncPublishers']);
+            Route::post('/create-report',     [GlpiController::class, 'createReport']);
         });
     });
 });
