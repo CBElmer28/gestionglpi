@@ -6,7 +6,7 @@
 >
     <extensions>
         <bootstrap class="Qameta\Allure\PHPUnit\AllureExtension">
-            <parameter name="outputDirectory" value="allure-results"/>
+            <parameter name="outputDirectory" value="build/allure-results"/>
         </bootstrap>
     </extensions>
     <testsuites>

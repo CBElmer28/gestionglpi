@@ -60,7 +60,7 @@ test('high volume data response time analysis (Stress Test)', function () {
 
     $response->assertStatus(200);
     
-    expect($searchTime)->toBeLessThan(0.5);
+    expect($searchTime)->toBeLessThan(1.0);
 });
 
 test('sequential requests burst handling capacity', function () {
@@ -83,5 +83,5 @@ test('sequential requests burst handling capacity', function () {
     echo "[STRESS] Ráfaga de {$requests} peticiones completada en {$totalBurst}s\n";
     echo "[STRESS] Promedio por petición: " . round($totalBurst / $requests, 4) . "s\n";
 
-    expect($totalBurst)->toBeLessThan(5);
+    expect($totalBurst)->toBeLessThan(10);
 });

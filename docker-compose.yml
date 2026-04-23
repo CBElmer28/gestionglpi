@@ -12,10 +12,10 @@ services:
     volumes:
       - ./mysql_data:/var/lib/mysql
       # Este volumen inyecta el script para crear ambas bases de datos:
-      - ./init-dbs.sql:/docker-entrypoint-initdb.d/init-dbs.sql 
+      - ./init-dbs.sql:/docker-entrypoint-initdb.d/init-dbs.sql
     ports:
       # CAMBIO DE PUERTO: Tu PC usará el 3307 (XAMPP es feliz), el contenedor usa el 3306.
-      - "3307:3306" 
+      - "3307:3306"
 
   # 2. Backend Laravel
   laravel-backend:
@@ -28,12 +28,14 @@ services:
       - db
     ports:
       - "8000:80"
+    volumes:
+      - ./server-laravel:/var/www/html
     env_file:
       - ./server-laravel/.env
     environment:
       # Laravel sigue apuntando al puerto 3306 interno de la red de Docker
       - DB_HOST=db
-      - DB_PORT=3306 
+      - DB_PORT=3306
       - DB_DATABASE=laravel_biblioteca # Base de datos específica para Laravel
       - DB_USERNAME=user_local
       - DB_PASSWORD=pass_local

@@ -13,7 +13,8 @@ return new class extends Migration
     {
         Schema::create('reports', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('book_id')->constrained()->onDelete('cascade');
+            $table->unsignedBigInteger('book_id');
+            $table->foreign('book_id')->references('id')->on('books')->onDelete('cascade');
             $table->string('glpi_ticket_id')->nullable();
             $table->string('priority'); // Low, Medium, High
             $table->text('description');
