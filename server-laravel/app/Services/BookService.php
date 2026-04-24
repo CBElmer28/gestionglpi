@@ -80,7 +80,8 @@ class BookService
         $updatedLocal = 0;
 
         // --- FASE 0: MAESTROS ---
-        $this->syncMasterTables();
+        $this->syncGenres();
+        $this->syncPublishers();
 
         // --- FASE 1: PUSH (Local -> GLPI) ---
         $localBooksMissingGlpi = Book::whereNull('glpi_id')->get();
@@ -139,19 +140,59 @@ class BookService
     }
 
     /**
-     * Sincroniza las tablas maestras desde GLPI.
+     * Sincroniza los géneros desde GLPI.
      */
-    protected function syncMasterTables(): void
+    public function syncGenres(): array
     {
         $glpiGenres = $this->glpiService->listGenres();
+        $synced = 0;
+
         foreach ($glpiGenres as $g) {
-            Genre::updateOrCreate(['glpi_id' => $g['id']], ['name' => $g['name']]);
+            // Intentar encontrar por glpi_id primero
+            $genre = Genre::where('glpi_id', $g['id'])->first();
+            
+            // Si no se encuentra, buscar por nombre para corregir posibles IDs corruptos
+            if (!$genre) {
+                $genre = Genre::where('name', $g['name'])->first();
+            }
+
+            if ($genre) {
+                $genre->update(['glpi_id' => $g['id'], 'name' => $g['name']]);
+            } else {
+                Genre::create(['glpi_id' => $g['id'], 'name' => $g['name']]);
+            }
+            $synced++;
         }
 
+        return ['count' => $synced];
+    }
+
+    /**
+     * Sincroniza las editoriales desde GLPI.
+     */
+    public function syncPublishers(): array
+    {
         $glpiPublishers = $this->glpiService->listPublishers();
+        $synced = 0;
+
         foreach ($glpiPublishers as $p) {
-            Publisher::updateOrCreate(['glpi_id' => $p['id']], ['name' => $p['name']]);
+            // Intentar encontrar por glpi_id primero
+            $publisher = Publisher::where('glpi_id', $p['id'])->first();
+            
+            // Si no se encuentra, buscar por nombre para corregir posibles IDs corruptos
+            if (!$publisher) {
+                $publisher = Publisher::where('name', $p['name'])->first();
+            }
+
+            if ($publisher) {
+                $publisher->update(['glpi_id' => $p['id'], 'name' => $p['name']]);
+            } else {
+                Publisher::create(['glpi_id' => $p['id'], 'name' => $p['name']]);
+            }
+            $synced++;
         }
+
+        return ['count' => $synced];
     }
 
     /**

@@ -108,6 +108,34 @@ class GlpiController extends Controller
     }
 
     /**
+     * Sincroniza solo los géneros desde GLPI.
+     */
+    public function syncGenres(): JsonResponse
+    {
+        $bookService = app(\App\Services\BookService::class);
+        $results = $bookService->syncGenres();
+
+        return response()->json([
+            'message' => 'Sincronización de géneros completada.',
+            'details' => $results
+        ]);
+    }
+
+    /**
+     * Sincroniza solo las editoriales desde GLPI.
+     */
+    public function syncPublishers(): JsonResponse
+    {
+        $bookService = app(\App\Services\BookService::class);
+        $results = $bookService->syncPublishers();
+
+        return response()->json([
+            'message' => 'Sincronización de editoriales completada.',
+            'details' => $results
+        ]);
+    }
+
+    /**
      * Reporta un daño en un libro creando un Ticket en GLPI y vinculando evidencias.
      */
     public function createReport(Request $request): JsonResponse

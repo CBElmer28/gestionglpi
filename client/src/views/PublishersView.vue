@@ -5,6 +5,12 @@
         <h1><font-awesome-icon icon="building" /> Editoriales</h1>
         <p>Listado de editoriales (fabricantes) sincronizados desde GLPI.</p>
       </div>
+      <div class="page-header-actions">
+        <button class="btn btn-ghost" @click="handleSync" :disabled="syncing">
+          <font-awesome-icon :icon="syncing ? 'sync' : 'sync'" :spin="syncing" />
+          {{ syncing ? 'Sincronizando...' : 'Sincronizar con GLPI' }}
+        </button>
+      </div>
     </div>
 
     <div class="card">
@@ -49,9 +55,12 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { glpiService } from '@/services/glpiService'
+import { useToast } from 'vue-toastification'
 
+const toast = useToast()
 const publishers = ref([])
 const loading = ref(false)
+const syncing = ref(false)
 
 async function fetchPublishers() {
   loading.value = true
@@ -62,6 +71,19 @@ async function fetchPublishers() {
     console.error('Error fetching publishers:', err)
   } finally {
     loading.value = false
+  }
+}
+
+async function handleSync() {
+  syncing.value = true
+  try {
+    const { data } = await glpiService.syncPublishers()
+    toast.success(data.message)
+    await fetchPublishers()
+  } catch (err) {
+    toast.error('Error al sincronizar editoriales.')
+  } finally {
+    syncing.value = false
   }
 }
 
