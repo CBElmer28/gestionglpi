@@ -8,7 +8,6 @@ services:
       - MARIADB_ROOT_PASSWORD=root_pass
       - MARIADB_USER=user_local
       - MARIADB_PASSWORD=pass_local
-      # Eliminamos MARIADB_DATABASE para que el script cree las dos.
     volumes:
       - ./mysql_data:/var/lib/mysql
       # Este volumen inyecta el script para crear ambas bases de datos:
