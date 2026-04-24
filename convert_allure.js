@@ -13,6 +13,11 @@ function getLabelValue(labels, name) {
     return label ? label.value : '';
 }
 
+function formatForSheets(isoString) {
+    if (!isoString) return '';
+    return isoString.replace('T', ' ').split('.')[0];
+}
+
 const allResults = [];
 
 resultsDirs.forEach(dir => {
@@ -29,8 +34,8 @@ resultsDirs.forEach(dir => {
                 const content = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
 
                 const startTimestamp = content.start || 0;
-                const start = startTimestamp ? new Date(startTimestamp).toISOString() : '';
-                const stop = content.stop ? new Date(content.stop).toISOString() : '';
+                const start = startTimestamp ? formatForSheets(new Date(startTimestamp).toISOString()) : '';
+                const stop = content.stop ? formatForSheets(new Date(content.stop).toISOString()) : '';
                 const duration = (content.start && content.stop) ? (content.stop - content.start) : 0;
 
                 let framework = getLabelValue(content.labels || [], 'framework');
@@ -98,5 +103,6 @@ const csvRows = [
     ...allResults.map(row => headers.map(header => `"${row[header]}"`).join(','))
 ];
 
-fs.writeFileSync(outputFile, csvRows.join('\n'), 'utf-8');
+const csvContent = '\ufeff' + csvRows.join('\n');
+fs.writeFileSync(outputFile, csvContent, 'utf-8');
 console.log(`Successfully created ${outputFile} with ${allResults.length} records across ${currentRun} runs.`);

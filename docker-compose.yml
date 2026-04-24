@@ -66,3 +66,23 @@ services:
     ports:
       - "8025:8025" 
       - "1025:1025"
+
+  # 5. Automatización con n8n
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n-local
+    restart: always
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - NODE_ENV=production
+      - WEBHOOK_URL=http://localhost:5678/
+      - N8N_DEFAULT_BINARY_DATA_MODE=file
+    volumes:
+      - n8n_storage:/home/node/.n8n
+      - .:/data/project:ro
+volumes:
+  n8n_storage:
