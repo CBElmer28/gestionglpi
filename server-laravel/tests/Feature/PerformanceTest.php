@@ -1,90 +1,80 @@
 <?php
 
-namespace Tests\Feature;
-
 use App\Models\Book;
 use App\Models\Genre;
 use App\Models\Publisher;
 use App\Models\Role;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
-use Tests\TestCase;
+use Illuminate\Support\Facades\Cache;
+use App\Services\GlpiService;
+use Qameta\Allure\Allure;
+use Qameta\Allure\Model\Severity;
 
-class PerformanceTest extends TestCase
-{
-    use RefreshDatabase;
+beforeEach(function () {
+    $this->seed(RolesAndPermissionsSeeder::class);
+    $this->admin = User::factory()->create([
+        'role_id' => Role::where('slug', 'admin')->first()->id
+    ]);
 
-    protected User $admin;
+    Allure::epic('Calidad y Rendimiento');
+    Allure::feature('Benchmarking de Eficiencia');
+});
 
-    protected function setUp(): void
-    {
-        parent::setUp();
-        $this->seed(RolesAndPermissionsSeeder::class);
-        $this->admin = User::factory()->create([
-            'role_id' => Role::where('slug', 'admin')->first()->id
-        ]);
-    }
+test('memory usage profiling under load', function () {
+    Allure::story('Perfilado de Memoria');
+    Allure::description('Mide el impacto en el consumo de memoria RAM al procesar grandes volúmenes de datos hidratados desde la base de datos.');
+    Allure::severity(Severity::normal());
 
-    /**
-     * Rendimiento: Perfilado de Memoria.
-     */
-    public function test_memory_usage_profiling()
-    {
-        // 1. Inyectar 1,000 libros
-        $genre = Genre::factory()->create();
-        $publisher = Publisher::factory()->create();
-        Book::factory()->count(1000)->create([
-            'genre_id' => $genre->id,
-            'publisher_id' => $publisher->id
-        ]);
+    // 1. Inyectar 1,000 libros
+    $genre = Genre::factory()->create();
+    $publisher = Publisher::factory()->create();
+    Book::factory()->count(1000)->create([
+        'genre_id' => $genre->id,
+        'publisher_id' => $publisher->id
+    ]);
 
-        $memoryBefore = memory_get_usage();
-        
-        // 2. Ejecutar la acción más pesada (Listar todos con hidratación)
-        $this->actingAs($this->admin)->getJson('/api/books?per_page=100');
-        
-        $memoryAfter = memory_get_usage();
-        $peakMemory = memory_get_peak_usage();
+    $memoryBefore = memory_get_usage();
+    
+    // 2. Ejecutar la acción más pesada (Listar todos con hidratación)
+    $this->actingAs($this->admin)->getJson('/api/books?per_page=100');
+    
+    $memoryAfter = memory_get_usage();
+    $peakMemory = memory_get_peak_usage();
 
-        $consumed = round(($memoryAfter - $memoryBefore) / 1024 / 1024, 2);
-        $peakMb = round($peakMemory / 1024 / 1024, 2);
+    $consumed = round(($memoryAfter - $memoryBefore) / 1024 / 1024, 2);
+    $peakMb = round($peakMemory / 1024 / 1024, 2);
 
-        echo "\n[PERFORMANCE] Consumo de Memoria (1k libros):\n";
-        echo " - Memoria utilizada por la petición: {$consumed} MB\n";
-        echo " - Pico de memoria del script: {$peakMb} MB\n";
+    echo "\n[PERFORMANCE] Consumo de Memoria (1k libros):\n";
+    echo " - Memoria utilizada por la petición: {$consumed} MB\n";
+    echo " - Pico de memoria del script: {$peakMb} MB\n";
 
-        // Un pico de > 128MB (límite común de PHP) indicaría un riesgo.
-        $this->assertLessThan(128, $peakMb, "El uso de memoria es demasiado alto.");
-    }
+    expect($peakMb)->toBeLessThan(128);
+});
 
-    /**
-     * Rendimiento: Benchmark de Latencia de red simulada.
-     * Mide el tiempo de procesamiento interno de la lógica de GLPI.
-     */
-    public function test_glpi_service_processing_latency()
-    {
-        // Forzar limpieza de caché para medir el ciclo completo (incluyendo initSession)
-        \Illuminate\Support\Facades\Cache::forget('glpi_session_token');
+test('glpi service internal processing latency benchmark', function () {
+    Allure::story('Latencia de Servicios Externos');
+    Allure::description('Mide el tiempo de respuesta interno del servicio GLPI, incluyendo el parseo de respuestas y gestión de sesiones.');
+    Allure::severity(Severity::critical());
 
-        Http::fake([
-            '*initSession*' => Http::response(['session_token' => 'fixed-token'], 200),
-            '*search*' => Http::response(['data' => [['2' => 1, '1' => 'Libro Prueba']]], 200),
-        ]);
+    Cache::forget('glpi_session_token');
 
-        $start = microtime(true);
-        
-        $service = new \App\Services\GlpiService();
-        $service->listBooks(); 
-        
-        $end = microtime(true);
-        $totalTimeMs = round(($end - $start) * 1000, 2);
+    Http::fake([
+        '*initSession*' => Http::response(['session_token' => 'fixed-token'], 200),
+        '*search*' => Http::response(['data' => [['2' => 1, '1' => 'Libro Prueba']]], 200),
+    ]);
 
-        echo "[PERFORMANCE] Latencia de Procesamiento GLPI (Interna + Mock):\n";
-        echo " - Tiempo total (init + search + mapping): {$totalTimeMs} ms\n";
+    $start = microtime(true);
+    
+    $service = new GlpiService();
+    $service->listBooks(); 
+    
+    $end = microtime(true);
+    $totalTimeMs = round(($end - $start) * 1000, 2);
 
-        // Debería ser muy rápido (< 500ms incluso en entornos lentos)
-        $this->assertLessThan(500, $totalTimeMs, "El procesamiento interno de GLPI es ineficiente.");
-    }
-}
+    echo "\n[PERFORMANCE] Latencia de Procesamiento GLPI (Interna + Mock):\n";
+    echo " - Tiempo total (init + search + mapping): {$totalTimeMs} ms\n";
+
+    expect($totalTimeMs)->toBeLessThan(500);
+});

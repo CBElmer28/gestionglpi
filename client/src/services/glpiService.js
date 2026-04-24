@@ -8,6 +8,8 @@ export const glpiService = {
   listPublishers: () => api.get('/glpi/publishers'),
   syncBook: (bookId) => api.post(`/glpi/sync-book/${bookId}`),
   syncAll: () => api.post('/glpi/sync-all'),
+  syncGenres: () => api.post('/glpi/sync-genres'),
+  syncPublishers: () => api.post('/glpi/sync-publishers'),
   createReport: (formData) => api.post('/glpi/create-report', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),

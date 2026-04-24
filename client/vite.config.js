@@ -22,6 +22,7 @@ export default defineConfig({
     css: false,
     include: ['src/**/*.test.js'],
     setupFiles: ['./src/tests/setup.js'],
+    reporters: ['default', ['allure-vitest/reporter', { outputFolder: 'allure-results' }]],
     coverage: {
       reporter: ['text', 'json', 'html'],
       exclude: ['node_modules/', 'src/tests/setup.js'],

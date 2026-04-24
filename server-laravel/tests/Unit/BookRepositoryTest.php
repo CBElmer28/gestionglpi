@@ -1,110 +1,76 @@
 <?php
 
-namespace Tests\Unit;
-
-use Tests\TestCase;
 use App\Models\Book;
 use App\Models\Genre;
-use App\Models\Publisher;
 use App\Repositories\BookRepository;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Database\Eloquent\Collection;
 
-class BookRepositoryTest extends TestCase
-{
-    use RefreshDatabase;
+beforeEach(function () {
+    $this->repository = new BookRepository();
+});
 
-    private BookRepository $repository;
+test('it filters books by genre', function () {
+    $genre1 = Genre::factory()->create();
+    $genre2 = Genre::factory()->create();
 
-    protected function setUp(): void
-    {
-        parent::setUp();
-        $this->repository = new BookRepository();
+    Book::factory()->count(3)->create(['genre_id' => $genre1->id]);
+    Book::factory()->count(2)->create(['genre_id' => $genre2->id]);
+
+    $results = $this->repository->all(['genre_id' => $genre1->id]);
+
+    expect($results->total())->toBe(3);
+    foreach ($results as $book) {
+        expect($book->genre_id)->toBe($genre1->id);
     }
+});
 
-    /**
-     * Camino 1: Filtrado por Género (Nodos 1 -> 2 -> ... -> 11)
-     */
-    public function test_it_filters_by_genre()
-    {
-        $genre1 = Genre::factory()->create();
-        $genre2 = Genre::factory()->create();
+test('it filters books by status', function () {
+    Book::factory()->count(3)->create(['status' => 'Disponible']);
+    Book::factory()->count(2)->create(['status' => 'Prestado']);
 
-        Book::factory()->count(3)->create(['genre_id' => $genre1->id]);
-        Book::factory()->count(2)->create(['genre_id' => $genre2->id]);
+    $results = $this->repository->all(['status' => 'Disponible']);
 
-        $results = $this->repository->all(['genre_id' => $genre1->id]);
+    expect($results->total())->toBe(3);
+});
 
-        $this->assertEquals(3, $results->total());
-        foreach ($results as $book) {
-            $this->assertEquals($genre1->id, $book->genre_id);
-        }
-    }
+test('it filters books by global query', function () {
+    Book::factory()->create(['title' => 'Quijote de la Mancha']);
+    Book::factory()->create(['author' => 'Miguel de Cervantes']);
+    Book::factory()->create(['isbn' => '9876543210']);
+    Book::factory()->create(['title' => 'Otro Libro']);
 
-    /**
-     * Camino 2: Filtrado por Estatus (Nodos 1 -> 3 -> ... -> 11)
-     */
-    public function test_it_filters_by_status()
-    {
-        Book::factory()->count(3)->create(['status' => 'Disponible']);
-        Book::factory()->count(2)->create(['status' => 'Prestado']);
+    // Búsqueda por título
+    $resTitle = $this->repository->all(['q' => 'Quijote']);
+    expect($resTitle->total())->toBe(1);
 
-        $results = $this->repository->all(['status' => 'Disponible']);
+    // Búsqueda por autor
+    $resAuthor = $this->repository->all(['q' => 'Cervantes']);
+    expect($resAuthor->total())->toBe(1);
+});
 
-        $this->assertEquals(3, $results->total());
-    }
+test('it returns all records without pagination', function () {
+    Book::factory()->count(15)->create();
 
-    /**
-     * Camino 3: Búsqueda Global (Nodos 1 -> 8 -> ... -> 11)
-     */
-    public function test_it_filters_by_global_query()
-    {
-        Book::factory()->create(['title' => 'Quijote de la Mancha']);
-        Book::factory()->create(['author' => 'Miguel de Cervantes']);
-        Book::factory()->create(['isbn' => '9876543210']);
-        Book::factory()->create(['title' => 'Otro Libro']);
+    $results = $this->repository->all(['per_page' => 'all']);
 
-        // Búsqueda por título
-        $resTitle = $this->repository->all(['q' => 'Quijote']);
-        $this->assertEquals(1, $resTitle->total());
+    expect($results)->toBeInstanceOf(Collection::class);
+    expect($results)->toHaveCount(15);
+});
 
-        // Búsqueda por autor
-        $resAuthor = $this->repository->all(['q' => 'Cervantes']);
-        $this->assertEquals(1, $resAuthor->total());
-    }
+test('it filters by multiple criteria', function () {
+    $genre = Genre::factory()->create();
+    Book::factory()->create([
+        'title' => 'Libro Especial',
+        'genre_id' => $genre->id,
+        'status' => 'Disponible'
+    ]);
+    Book::factory()->create(['title' => 'Libro Especial', 'status' => 'Prestado']);
 
-    /**
-     * Camino 4: Retorno de todos los registros (Sin paginación) (Nodos 1 -> 9 -> 10)
-     */
-    public function test_it_returns_all_records_without_pagination()
-    {
-        Book::factory()->count(15)->create();
+    $results = $this->repository->all([
+        'title' => 'Especial',
+        'genre_id' => $genre->id,
+        'status' => 'Disponible'
+    ]);
 
-        $results = $this->repository->all(['per_page' => 'all']);
-
-        // Debe ser una Collection de Eloquent, no un Paginator
-        $this->assertInstanceOf(\Illuminate\Database\Eloquent\Collection::class, $results);
-        $this->assertCount(15, $results);
-    }
-
-    /**
-     * Pruebas de integración de filtros combinados
-     */
-    public function test_it_filters_by_multiple_criteria()
-    {
-        $genre = Genre::factory()->create();
-        Book::factory()->create([
-            'title' => 'Libro Especial',
-            'genre_id' => $genre->id,
-            'status' => 'Disponible'
-        ]);
-        Book::factory()->create(['title' => 'Libro Especial', 'status' => 'Prestado']);
-
-        $results = $this->repository->all([
-            'title' => 'Especial',
-            'genre_id' => $genre->id,
-            'status' => 'Disponible'
-        ]);
-
-        $this->assertEquals(1, $results->total());
-    }
-}
+    expect($results->total())->toBe(1);
+});

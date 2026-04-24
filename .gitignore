@@ -10,7 +10,12 @@ Thumbs.db
 # IDE/Editor files
 .vscode/
 .idea/
-*.swp
+*.sw?
+
+# Allure & Testing
+allure-results/
+test-results/
+playwright-report/
 *.swo
 *.suo
 *.ntvs*
@@ -45,6 +50,10 @@ server-laravel/Homestead.yaml
 server-laravel/auth.json
 server-laravel/npm-debug.log
 server-laravel/yarn-error.log
+
+# Allure & Testing
+/build/allure-results/
+.phpunit.cache/
 server-laravel/.phpunit.cache
 
 # Server GLPI (Docker/Data)
@@ -56,3 +65,9 @@ server-glpi/mysql_data/
 !db_backups/*.sql
 
 mysql_data/*
+# Allure & Testing Reports
+allure-report/
+allure-results/
+server-laravel/build/allure-results/
+client/allure-results/
+client/test-results/

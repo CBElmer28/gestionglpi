@@ -25,18 +25,17 @@ Una vez instaladas las dependencias, ya puedes correr los comandos de la secció
 
 ## 🚀 Cómo ejecutar las pruebas
 
-### 1. Backend (Laravel)
-Todas las pruebas del backend se ejecutan en un entorno **SQLite en memoria** por defecto, por lo que son rápidas y seguras (no afectan a tu base de datos local).
+### 1. Backend (Laravel + Pest PHP)
+Todas las pruebas del backend se han migrado a **Pest PHP**. Pest ofrece una sintaxis mucho más limpia y expresiva. Se ejecutan en un entorno **SQLite en memoria** por defecto.
 
-| Tipo de Prueba | Descripción | Comando de Ejecución |
+| Tipo de Prueba | Descripción | Comando |
 | :--- | :--- | :--- |
 | **Global** | Ejecuta todos los tests del sistema | `php artisan test` |
-| **Caja Blanca** | Validación de lógica interna y caminos críticos | `php artisan test --filter SecurityValidationTest` |
-| **Integración** | Flujos completos de préstamos y GLPI | `php artisan test --filter LoanIntegrationTest` |
-| **Recuperación** | Pruebas de resiliencia y auto-curación | `php artisan test --filter RecoveryTest` |
-| **Seguridad** | Pruebas de IDOR y control de accesos (RBAC) | `php artisan test --filter PrivilegeEscalationTest` |
-| **Resistencia** | Carga masiva (2,000 registros) | `php artisan test --filter StressTest` |
-| **Rendimiento** | Benchmarking de memoria y latencia | `php artisan test --filter PerformanceTest` |
+| **Caja Blanca** | Validación de lógica interna | `php artisan test --filter SecurityValidation` |
+| **Seguridad** | Pruebas de IDOR y RBAC | `php artisan test --filter PrivilegeEscalation` |
+| **Resistencia** | Carga masiva (2,000 registros) | `php artisan test --filter Stress` |
+| **Rendimiento** | Benchmark de memoria y latencia | `php artisan test --filter Performance` |
+| **Watch Mode** | Ejecuta tests automáticamente al guardar | `.\vendor\bin\pest --watch` |
 
 ### 2. Frontend (Vue.js)
 El frontend utiliza **Vitest** para pruebas unitarias y de componentes.
@@ -72,4 +71,45 @@ El frontend utiliza **Vitest** para pruebas unitarias y de componentes.
 - Basadas en el análisis del flujo de control de funciones clave del controlador de libros y préstamos, garantizando que cada "if/else" y "catch" haya sido probado al menos una vez.
 
 ---
-**El sistema ReadOut está totalmente verificado y listo para su uso.**
+
+## 📊 Dashboard de Reportes Gráficos (ReadOut QA)
+
+Hemos integrado **Allure Framework** con un branding personalizado ("ReadOut QA") para proporcionar una visión visual y profesional de la calidad del proyecto. El sistema consolida actualmente **68 pruebas automáticas**.
+
+### 1. Composición de la Suite (68 Tests)
+| Módulo | Cantidad | Tecnología | Descripción |
+| :--- | :--- | :--- | :--- |
+| **Backend** | 40 | Pest PHP | Seguridad, Rendimiento, Lógica de Negocio y Caja Blanca. |
+| **Frontend Unit** | 24 | Vitest | Store (Pinia), Router, Servicios y Controladores. |
+| **Frontend E2E** | 4 | Playwright | Flujos críticos, Sincronización GLPI y Reporte de Incidencias. |
+
+### 2. Preparación de Allure
+Tu máquina necesita el CLI de Allure para procesar los resultados:
+- **NPM (Recomendado)**: `npm install -g allure-commandline`
+- **Windows (Scoop)**: `scoop install allure`
+
+### 3. Ejecución y Consolidación (Orquestador)
+Para generar el reporte con **Historial y Tendencias**, no uses el comando base de Allure. Usa el orquestador automático que une los resultados de Laravel y Vue:
+
+1. **Ejecutar la suite completa**:
+   ```bash
+   # En /server-laravel
+   php artisan test
+   # En /client
+   npm run test && npx playwright test
+   ```
+
+2. **Generar y Abrir el Reporte**:
+   Desde la **raíz del proyecto**:
+   ```bash
+   node generate-allure-report.js
+   npx allure-commandline open
+   ```
+
+### 4. Qué verás en Allure
+- **QA Trends**: Gráficas históricas de éxito/fallo y duración.
+- **Attachments**: Capturas de pantalla automáticas en fallos de Playwright.
+- **Environment**: Información técnica del sistema (OS, Node, Versiones).
+
+---
+**El sistema ReadOut está totalmente verificado con una cobertura integral y visualmente documentado.**

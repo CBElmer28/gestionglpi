@@ -1,71 +1,59 @@
 <?php
 
-namespace Tests\Feature;
-
-use Tests\TestCase;
 use App\Models\User;
 use App\Models\Book;
 use App\Models\Role;
 use Database\Seeders\RolesAndPermissionsSeeder;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Qameta\Allure\Allure;
+use Qameta\Allure\Model\Severity;
 
-class AccessControlTest extends TestCase
-{
-    use RefreshDatabase;
+beforeEach(function () {
+    $this->seed(RolesAndPermissionsSeeder::class);
+    
+    $adminRole = Role::where('slug', 'admin')->first();
+    $biblioRole = Role::where('slug', 'bibliotecario')->first();
 
-    protected User $admin;
-    protected User $bibliotecario;
+    $this->admin = User::factory()->create(['role_id' => $adminRole->id]);
+    $this->bibliotecario = User::factory()->create(['role_id' => $biblioRole->id]);
 
-    protected function setUp(): void
-    {
-        parent::setUp();
-        
-        $this->seed(RolesAndPermissionsSeeder::class);
-        $adminRole = Role::where('slug', 'admin')->first();
-        $biblioRole = Role::where('slug', 'bibliotecario')->first();
+    Allure::epic('Seguridad y Control de Acceso');
+    Allure::feature('RBAC (Control de Acceso basado en Roles)');
+});
 
-        $this->admin = User::factory()->create(['role_id' => $adminRole->id]);
-        $this->bibliotecario = User::factory()->create(['role_id' => $biblioRole->id]);
-    }
+test('bibliotecario cannot delete books', function () {
+    Allure::story('Restricciones del Rol Bibliotecario');
+    Allure::description('Verifica que un bibliotecario no tenga permisos de eliminación para proteger la integridad de los datos.');
+    Allure::severity(Severity::critical());
 
-    /**
-     * Prueba que el bibliotecario NO puede borrar libros.
-     */
-    public function test_bibliotecario_cannot_delete_books()
-    {
-        $book = Book::factory()->create();
+    $book = Book::factory()->create();
 
-        $response = $this->actingAs($this->bibliotecario)
-                         ->deleteJson("/api/books/{$book->id}");
+    $this->actingAs($this->bibliotecario)
+        ->deleteJson("/api/books/{$book->id}")
+        ->assertStatus(403);
+    
+    $this->assertDatabaseHas('books', ['id' => $book->id]);
+});
 
-        // El acceso debería ser denegado (403 Forbidden)
-        $response->assertStatus(403);
-        
-        $this->assertDatabaseHas('books', ['id' => $book->id]);
-    }
+test('admin can delete books', function () {
+    Allure::story('Privilegios del Rol Administrador');
+    Allure::description('Verifica que el administrador tenga control total sobre el inventario, incluyendo la eliminación.');
+    Allure::severity(Severity::critical());
 
-    /**
-     * Prueba que el admin SÍ puede borrar libros.
-     */
-    public function test_admin_can_delete_books()
-    {
-        $book = Book::factory()->create();
+    $book = Book::factory()->create();
 
-        $response = $this->actingAs($this->admin)
-                         ->deleteJson("/api/books/{$book->id}");
+    $this->actingAs($this->admin)
+        ->deleteJson("/api/books/{$book->id}")
+        ->assertStatus(200);
 
-        $response->assertStatus(200);
-        $this->assertDatabaseMissing('books', ['id' => $book->id]);
-    }
+    $this->assertDatabaseMissing('books', ['id' => $book->id]);
+});
 
-    /**
-     * Prueba el flujo de logout.
-     */
-    public function test_user_can_logout()
-    {
-        $response = $this->actingAs($this->admin)
-                         ->postJson('/api/auth/logout');
+test('user can logout', function () {
+    Allure::story('Gestión de Sesiones');
+    Allure::description('Verifica que el sistema cierre correctamente la sesión del usuario.');
+    Allure::severity(Severity::normal());
 
-        $response->assertStatus(200);
-    }
-}
+    $this->actingAs($this->admin)
+        ->postJson('/api/auth/logout')
+        ->assertStatus(200);
+});
