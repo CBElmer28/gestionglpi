@@ -48,6 +48,15 @@ services:
       - n8n_storage_prod:/home/node/.n8n
       # Eliminé el mapeo .:/data/project:ro porque en prod n8n no necesita ver tu código fuente, 
       # recibe el CSV de las pruebas por la red vía Webhook.
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared-tunnel
+    restart: always
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - n8n
 
 # Declaración de volúmenes manejados por Docker
 volumes:
