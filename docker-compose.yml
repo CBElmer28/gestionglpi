@@ -7,9 +7,9 @@ services:
     container_name: laravel-prod
     restart: always
     ports:
-      - "80:80" # Tu API de Laravel estará disponible en el puerto HTTP por defecto (80)
+      - "80:80" 
     env_file:
-      - ./server-laravel/.env # Carga las variables desde el .env de Laravel
+      - ./server-laravel/.env 
     deploy:
       resources:
         limits:
@@ -21,42 +21,35 @@ services:
     container_name: glpi-prod
     restart: always
     ports:
-      - "8080:80" # GLPI estará disponible añadiendo :8080 a la IP de tu EC2
+      - "8080:80" 
     environment:
-      # Apuntamos GLPI directamente a la instancia de AWS RDS
+      # Conexión directa a RDS
       - GLPI_DB_HOST=tu-instancia-rds.us-east-1.rds.amazonaws.com
       - GLPI_DB_NAME=glpi_db
       - GLPI_DB_USER=admin_rds
       - GLPI_DB_PASSWORD=tu_password_seguro
     volumes:
-      # Persistencia vital para que GLPI no pierda documentos o plugins si el contenedor se reinicia
-      - ./server-glpi/glpi_data:/var/www/html/glpi
+      # Uso de volumen nombrado para evitar problemas de permisos en Linux/EC2
+      - glpi_data_prod:/var/www/html/glpi
 
-  # 4. Mailpit
-  mailpit:
-    image: axllent/mailpit
-    container_name: mailpit-local
-    restart: always
-    ports:
-      - "8025:8025" 
-      - "1025:1025"
-
-  # 5. Automatización con n8n
+  # 4. Automatización con n8n
   n8n:
     image: n8nio/n8n:latest
-    container_name: n8n-local
+    container_name: n8n-prod
     restart: always
     ports:
       - "5678:5678"
     environment:
-      - N8N_HOST=localhost
-      - N8N_PORT=5678
-      - N8N_PROTOCOL=http
       - NODE_ENV=production
-      - WEBHOOK_URL=http://localhost:5678/
+      - N8N_HOST=198.51.100.25 
+      - WEBHOOK_URL=http://198.51.100.25:5678/ 
       - N8N_DEFAULT_BINARY_DATA_MODE=file
     volumes:
-      - n8n_storage:/home/node/.n8n
-      - .:/data/project:ro
+      - n8n_storage_prod:/home/node/.n8n
+      # Eliminé el mapeo .:/data/project:ro porque en prod n8n no necesita ver tu código fuente, 
+      # recibe el CSV de las pruebas por la red vía Webhook.
+
+# Declaración de volúmenes manejados por Docker
 volumes:
-  n8n_storage:
+  glpi_data_prod:
+  n8n_storage_prod:
