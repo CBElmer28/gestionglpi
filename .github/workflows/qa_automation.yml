@@ -1,0 +1,125 @@
+name: ReadOut QA Cloud Automation
+
+on:
+  push:
+    branches: [ main, prod ]
+  schedule:
+    - cron: '0 0 * * *' # Ejecución automática cada medianoche
+
+jobs:
+  test-and-report:
+    runs-on: ubuntu-latest
+    
+    # 1. SERVICIOS (Base de datos efímera)
+    services:
+      mysql:
+        image: mariadb:10.11
+        env:
+          MYSQL_ROOT_PASSWORD: root_pass
+          MYSQL_DATABASE: laravel_biblioteca # Crea la DB automáticamente
+          MYSQL_USER: user_local
+          MYSQL_PASSWORD: pass_local
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # --- REQUISITOS DEL SISTEMA ---
+      - name: Setup Java (Para Allure Report)
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      # --- CONFIGURACIÓN BACKEND (LARAVEL) ---
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: dom, curl, libxml, mbstring, zip, pdo_mysql # Necesitas pdo_mysql
+
+      - name: Install Laravel Dependencies & Setup DB
+        run: |
+          cd server-laravel
+          composer install --prefer-dist --no-progress
+          cp .env.testing .env
+          php artisan key:generate
+          # ¡CRÍTICO! Ejecutar migraciones en la base de datos temporal
+          php artisan migrate --seed
+
+      - name: Run Backend Tests (Pest/PHPUnit)
+        run: |
+          cd server-laravel
+          php artisan test
+
+      - name: Start Laravel Server for E2E
+        run: |
+          cd server-laravel
+          php artisan serve --port=8000 &
+          sleep 3
+
+      # --- CONFIGURACIÓN FRONTEND (VUE.JS) ---
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install Frontend Dependencies
+        run: |
+          cd client
+          npm install
+
+      - name: Run Vitest (Unit & Component)
+        run: |
+          cd client
+          npm run test -- --run
+
+      - name: Install Playwright Browsers
+        run: |
+          cd client
+          npx playwright install --with-deps
+
+      # ¡CRÍTICO! Levantar el frontend para que Playwright tenga a dónde entrar
+      - name: Start Vue.js Frontend Server
+        run: |
+          cd client
+          npm run dev -- --port 5173 &
+          sleep 5
+
+      - name: Run Playwright tests (E2E)
+        run: |
+          cd client
+          npx playwright test
+
+      # --- GENERACIÓN DE REPORTES ---
+      # Asegúrate de instalar dependencias de node en la raíz si tus scripts las usan
+      - name: Generate Allure Report and CSV
+        run: |
+          npm install -g allure-commandline
+          node generate-allure-report.js
+          node convert_allure.js
+
+      # --- COMUNICACIÓN CON N8N (CLOUD) ---
+      - name: Upload CSV to n8n Webhook
+        # El comando curl está perfecto
+        run: |
+          curl -X POST "https://n8n.tu-dominio.com/webhook/test-results" \
+          -F "data=@allure_results_summary.csv"
+
+      # --- PERSISTENCIA (ARTEFACTOS) ---
+      - name: Upload Allure Report Artifact
+        # Solo sube el reporte si las pruebas pasaron O fallaron, para no perder visibilidad
+        if: always() 
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-report-html
+          path: allure-report/
+          retention-days: 7
