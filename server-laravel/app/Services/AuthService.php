@@ -22,7 +22,7 @@ class AuthService
         $user = $this->userRepository->findByEmail($email);
 
         if (!$user || !Hash::check($password, $user->password)) {
-            return ['success' => false, 'message' => 'Credenciales inválidas.'];
+            return ['success' => false, 'message' => 'Error al iniciar sesión. Credenciales inválidas.'];
         }
 
         // Cargar rol y permisos
