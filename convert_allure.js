@@ -102,4 +102,4 @@ const csvRows = [
 
 const csvContent = '\ufeff' + csvRows.join('\n');
 fs.writeFileSync(outputFile, csvContent, 'utf-8');
-console.log(`Successfully created ${outputFile} with ${allResults.length} records across ${currentRun} runs.`);
+console.log(`Successfully created ${outputFile} with ${allResults.length} records for Run ${runNumber}.`);
