@@ -4,7 +4,7 @@ on:
   push:
     branches: [ main, prod ]
   schedule:
-    - cron: '0 0 * * *' # Ejecución automática cada medianoche
+    - cron: '0 */4 * * *' # Ejecución automática cada medianoche
 
 jobs:
   test-and-report:
