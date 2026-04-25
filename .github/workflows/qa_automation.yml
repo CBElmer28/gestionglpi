@@ -117,6 +117,12 @@ jobs:
           cd client
           npx playwright install --with-deps
 
+      - name: Debug Laravel Logs on Failure
+        if: failure()
+        run: |
+          echo "=== LOGS DE LARAVEL ==="
+          cat server-laravel/storage/logs/laravel.log || echo "No hay logs de Laravel"
+
       # ¡CRÍTICO! Levantar el frontend para que Playwright tenga a dónde entrar
       - name: Start Vue.js Frontend Server
         run: |
