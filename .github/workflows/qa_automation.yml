@@ -85,14 +85,19 @@ jobs:
       - name: Reset and Seed DB for E2E
         run: |
           cd server-laravel
-          # migrate:fresh borra todo rastro de las pruebas anteriores y crea tablas nuevas
+          
+          rm -f .env.testing
+          
+          php artisan config:clear
+          php artisan cache:clear
+          
           php artisan migrate:fresh --seed
-
       - name: Start Laravel Server for E2E
         run: |
           cd server-laravel
-          php artisan serve --port=8000 &
-          sleep 3
+          chmod -R 777 storage bootstrap/cache
+          php artisan serve --host=127.0.0.1 --port=8000 &
+          sleep 5
 
       # --- CONFIGURACIÓN FRONTEND (VUE.JS) ---
       - name: Setup Node.js
