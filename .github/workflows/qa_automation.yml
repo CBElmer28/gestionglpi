@@ -48,15 +48,45 @@ jobs:
         run: |
           cd server-laravel
           composer install --prefer-dist --no-progress
-          cp .env.testing .env
+          
+          cat <<EOF > .env
+          APP_NAME=Laravel
+          APP_ENV=testing
+          APP_KEY=base64:Jc5eXeXjDj1oUu7x9yqSv+kIvR0OiZrsy6w/DBLrrBI=
+          APP_DEBUG=true
+          APP_URL=http://127.0.0.1:8000
+          
+          DB_CONNECTION=mysql
+          DB_HOST=127.0.0.1
+          DB_PORT=3306
+          DB_DATABASE=laravel_biblioteca
+          DB_USERNAME=user_local
+          DB_PASSWORD=pass_local
+          
+          MAIL_MAILER=log
+          
+          CACHE_DRIVER=array
+          SESSION_DRIVER=file
+          QUEUE_CONNECTION=sync
+          
+          GLPI_URL=http://127.0.0.1:9999/api.php/v1
+          GLPI_APP_TOKEN=fake_token
+          GLPI_USER_TOKEN=fake_token
+          EOF
+          
           php artisan key:generate
-          # ¡CRÍTICO! Ejecutar migraciones en la base de datos temporal
+          
           php artisan migrate --seed
-
       - name: Run Backend Tests (Pest/PHPUnit)
         run: |
           cd server-laravel
           php artisan test
+          
+      - name: Reset and Seed DB for E2E
+        run: |
+          cd server-laravel
+          # migrate:fresh borra todo rastro de las pruebas anteriores y crea tablas nuevas
+          php artisan migrate:fresh --seed
 
       - name: Start Laravel Server for E2E
         run: |
@@ -100,8 +130,8 @@ jobs:
           npx playwright test
 
       # --- GENERACIÓN DE REPORTES ---
-      # Asegúrate de instalar dependencias de node en la raíz si tus scripts las usan
       - name: Generate Allure Report and CSV
+        if: always() # <--- ✨ EL PARCHE MÁGICO 1
         run: |
           npm install -g allure-commandline
           node generate-allure-report.js
@@ -109,15 +139,14 @@ jobs:
 
       # --- COMUNICACIÓN CON N8N (CLOUD) ---
       - name: Upload CSV to n8n Webhook
-        # El comando curl está perfecto
+        if: always() 
         run: |
-          curl -X POST "https://n8n.tu-dominio.com/webhook/test-results" \
+          curl -X POST "https://n8n.elmerdev.com/webhook/test-results" \
           -F "data=@allure_results_summary.csv"
 
       # --- PERSISTENCIA (ARTEFACTOS) ---
       - name: Upload Allure Report Artifact
-        # Solo sube el reporte si las pruebas pasaron O fallaron, para no perder visibilidad
-        if: always() 
+        if: always() # (Este ya lo tenías bien)
         uses: actions/upload-artifact@v4
         with:
           name: allure-report-html
