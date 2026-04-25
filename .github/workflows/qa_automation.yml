@@ -143,6 +143,8 @@ jobs:
       # --- GENERACIÓN DE REPORTES ---
       - name: Generate Allure Report and CSV
         if: always() # <--- ✨ EL PARCHE MÁGICO 1
+        env:
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
         run: |
           npm install -g allure-commandline
           node generate-allure-report.js

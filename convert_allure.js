@@ -86,15 +86,12 @@ if (allResults.length === 0) {
 // Sort by timestamp to identify runs
 allResults.sort((a, b) => a.startTimestamp - b.startTimestamp);
 
-// Group into runs based on time gaps (e.g., 4 minutes = 240,000 ms)
-let currentRun = 1;
-const RUN_GAP_MS = 240000;
+
+const runNumber = process.env.GITHUB_RUN_NUMBER || Date.now();
+const testRunLabel = `Ejecución ${runNumber}`;
 
 for (let i = 0; i < allResults.length; i++) {
-    if (i > 0 && (allResults[i].startTimestamp - allResults[i - 1].startTimestamp) > RUN_GAP_MS) {
-        currentRun++;
-    }
-    allResults[i].test_run = `Ejecución ${currentRun}`;
+    allResults[i].test_run = testRunLabel;
 }
 
 const headers = Object.keys(allResults[0]).filter(h => h !== 'startTimestamp');
