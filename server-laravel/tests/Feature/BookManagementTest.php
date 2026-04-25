@@ -30,7 +30,7 @@ beforeEach(function () {
 
 test('a librarian can create a book and it persists in the database', function () {
     $bookData = [
-        'isbn' => '1234567890',
+        'isbn' => '978' . str_pad(mt_rand(0, 9999999999), 10, '0', STR_PAD_LEFT),
         'title' => 'Libro de Prueba',
         'author' => 'Autor Test',
         'edition' => '1ra Edición',
@@ -46,14 +46,14 @@ test('a librarian can create a book and it persists in the database', function (
 
     // Verificar persistencia en MySQL
     $this->assertDatabaseHas('books', [
-        'isbn' => '1234567890',
+        'isbn' => $bookData['isbn'],
         'title' => 'Libro de Prueba'
     ]);
 });
 
 test('an admin can delete a book and maintain integrity', function () {
     $book = Book::create([
-        'isbn' => '999',
+        'isbn' => '978' . str_pad(mt_rand(0, 9999999999), 10, '0', STR_PAD_LEFT),
         'title' => 'ABorrar',
         'author' => 'A',
         'edition' => 'X',

@@ -71,7 +71,7 @@ test.describe('Flujo de la Biblioteca Digital', () => {
 
     await page.fill('#modal-book input[placeholder="Título del libro"]', bookTitle);
     await page.fill('#modal-book input[placeholder="Nombre del autor"]', 'Playwright Author');
-    await page.fill('#modal-book input[placeholder="978-XXXXXXXXXX"]', bookIsbn);
+    await page.fill('#modal-book input[placeholder="9780000000000"]', bookIsbn);
     await page.fill('#modal-book input[placeholder="Ej: 2da Edición / 2024"]', '1ra Edición E2E');
     await page.fill('#modal-book textarea', 'Descripción de prueba generada por E2E.');
 
@@ -137,7 +137,7 @@ test.describe('Flujo de la Biblioteca Digital', () => {
 
     // Navegar a Libros
     await page.click('.sidebar-item:has-text("Libros")');
-    
+
     // Buscar la primera fila que TENGA el botón de reporte (evitando los que ya están en mantenimiento)
     const reportButton = page.locator('.btn-action-report').first();
     await expect(reportButton).toBeVisible({ timeout: 15000 });
@@ -161,7 +161,7 @@ test.describe('Flujo de la Biblioteca Digital', () => {
     // Buscamos el Toast de éxito por su texto característico
     const successToast = page.locator('text=Gracias por reportar esta incidencia');
     await expect(successToast).toBeVisible({ timeout: 60000 });
-    
+
     // También verificamos que el modal se haya cerrado automáticamente
     await expect(page.locator('#modal-report')).toBeHidden({ timeout: 20000 });
   });

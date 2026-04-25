@@ -36,7 +36,7 @@ class BookController extends Controller
         $validator = Validator::make($request->all(), [
             'title'        => ['required', 'string', 'max:255', new \App\Rules\SafeText],
             'author'       => ['required', 'string', 'max:255', new \App\Rules\SafeText],
-            'isbn'         => ['required', 'string', 'max:50', 'unique:books,isbn', new \App\Rules\SafeText],
+            'isbn'         => ['required', 'string', 'size:13', 'regex:/^978[0-9]{10}$/', 'unique:books,isbn'],
             'edition'      => ['required', 'string', 'max:100', new \App\Rules\SafeText],
             'genre_id'     => 'required|exists:genres,id',
             'publisher_id' => 'required|exists:publishers,id',
@@ -61,7 +61,7 @@ class BookController extends Controller
         $validator = Validator::make($request->all(), [
             'title'        => ['sometimes', 'required', 'string', 'max:255', new \App\Rules\SafeText],
             'author'       => ['sometimes', 'required', 'string', 'max:255', new \App\Rules\SafeText],
-            'isbn'         => ['sometimes', 'required', 'string', 'max:50', "unique:books,isbn,{$id}", new \App\Rules\SafeText],
+            'isbn'         => ['sometimes', 'required', 'string', 'size:13', 'regex:/^978[0-9]{10}$/', "unique:books,isbn,{$id}"],
             'edition'      => ['sometimes', 'required', 'string', 'max:100', new \App\Rules\SafeText],
             'genre_id'     => 'sometimes|required|exists:genres,id',
             'publisher_id' => 'sometimes|required|exists:publishers,id',

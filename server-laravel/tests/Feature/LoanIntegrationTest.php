@@ -30,7 +30,7 @@ beforeEach(function () {
     $this->book = Book::create([
         'title' => 'Libro de Integración',
         'author' => 'Autor Test',
-        'isbn' => '111222333',
+        'isbn' => '978' . str_pad(mt_rand(0, 9999999999), 10, '0', STR_PAD_LEFT),
         'edition' => '1ra',
         'genre_id' => $genre->id,
         'publisher_id' => $publisher->id,

@@ -19,7 +19,7 @@ class BookFactory extends Factory
     public function definition(): array
     {
         return [
-            'isbn' => fake()->isbn13(),
+            'isbn' => fake()->numerify('978##########'),
             'title' => fake()->sentence(3),
             'author' => fake()->name(),
             'genre_id' => Genre::factory(),
