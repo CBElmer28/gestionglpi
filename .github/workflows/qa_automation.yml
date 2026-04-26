@@ -1,0 +1,172 @@
+name: ReadOut QA Cloud Automation
+
+on:
+  push:
+    branches: [ main, prod ]
+  schedule:
+    - cron: '0 */4 * * *' # Ejecución automática cada medianoche
+
+jobs:
+  test-and-report:
+    runs-on: ubuntu-latest
+    
+    # 1. SERVICIOS (Base de datos efímera)
+    services:
+      mysql:
+        image: mariadb:10.11
+        env:
+          MYSQL_ROOT_PASSWORD: root_pass
+          MYSQL_DATABASE: laravel_biblioteca # Crea la DB automáticamente
+          MYSQL_USER: user_local
+          MYSQL_PASSWORD: pass_local
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    steps:
+      - name: Checkout Code (Smart Branching)
+        uses: actions/checkout@v4
+        with:
+          # Si el disparador fue el 'schedule' (cron), fuerza la descarga de 'prod'. 
+          # Si fue un 'push', usa la rama donde se hizo el push.
+          ref: ${{ github.event_name == 'schedule' && 'prod' || github.ref }}
+
+      # --- REQUISITOS DEL SISTEMA ---
+      - name: Setup Java (Para Allure Report)
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      # --- CONFIGURACIÓN BACKEND (LARAVEL) ---
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: dom, curl, libxml, mbstring, zip, pdo_mysql # Necesitas pdo_mysql
+
+      - name: Install Laravel Dependencies & Setup DB
+        run: |
+          cd server-laravel
+          composer install --prefer-dist --no-progress
+          
+          cat <<EOF > .env
+          APP_NAME=Laravel
+          APP_ENV=testing
+          APP_KEY=base64:Jc5eXeXjDj1oUu7x9yqSv+kIvR0OiZrsy6w/DBLrrBI=
+          APP_DEBUG=true
+          APP_URL=http://127.0.0.1:8000
+          
+          DB_CONNECTION=mysql
+          DB_HOST=127.0.0.1
+          DB_PORT=3306
+          DB_DATABASE=laravel_biblioteca
+          DB_USERNAME=user_local
+          DB_PASSWORD=pass_local
+          
+          MAIL_MAILER=log
+          
+          CACHE_DRIVER=array
+          SESSION_DRIVER=file
+          QUEUE_CONNECTION=sync
+          
+          GLPI_URL=http://127.0.0.1:9999/api.php/v1
+          GLPI_APP_TOKEN=fake_token
+          GLPI_USER_TOKEN=fake_token
+          EOF
+          
+          php artisan key:generate
+          
+          php artisan migrate --seed
+      - name: Run Backend Tests (Pest/PHPUnit)
+        run: |
+          cd server-laravel
+          php artisan test
+          
+      - name: Reset and Seed DB for E2E
+        run: |
+          cd server-laravel
+          
+          rm -f .env.testing
+          
+          php artisan config:clear
+          php artisan cache:clear
+          
+          php artisan migrate:fresh --seed
+      - name: Start Laravel Server for E2E
+        run: |
+          cd server-laravel
+          chmod -R 777 storage bootstrap/cache
+          php artisan serve --host=127.0.0.1 --port=8000 &
+          sleep 5
+
+      # --- CONFIGURACIÓN FRONTEND (VUE.JS) ---
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install Frontend Dependencies
+        run: |
+          cd client
+          npm install
+
+      - name: Run Vitest (Unit & Component)
+        run: |
+          cd client
+          npm run test -- --run
+
+      - name: Install Playwright Browsers
+        run: |
+          cd client
+          npx playwright install --with-deps
+
+      # ¡CRÍTICO! Levantar el frontend para que Playwright tenga a dónde entrar
+      - name: Start Vue.js Frontend Server
+        run: |
+          cd client
+          npm run dev -- --port 5173 &
+          sleep 5
+
+      - name: Run Playwright tests (E2E)
+        run: |
+          cd client
+          npx playwright test
+
+      - name: Debug Laravel Logs on Failure
+        if: failure()
+        run: |
+          echo "=== LOGS DE LARAVEL ==="
+          cat server-laravel/storage/logs/laravel.log || echo "No hay logs de Laravel"
+
+      # --- GENERACIÓN DE REPORTES ---
+      - name: Generate Allure Report and CSV
+        if: always() # <--- ✨ EL PARCHE MÁGICO 1
+        env:
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          npm install -g allure-commandline
+          node generate-allure-report.js
+          node convert_allure.js
+
+      # --- COMUNICACIÓN CON N8N (CLOUD) ---
+      - name: Upload CSV to n8n Webhook
+        if: always() 
+        run: |
+          curl -X POST "https://n8n.elmerdev.com/webhook/test-results" \
+          -F "data=@allure_results_summary.csv"
+
+      # --- PERSISTENCIA (ARTEFACTOS) ---
+      - name: Upload Allure Report Artifact
+        if: always() # (Este ya lo tenías bien)
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-report-html
+          path: allure-report/
+          retention-days: 7
