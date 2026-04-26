@@ -28,7 +28,12 @@ jobs:
           --health-retries=3
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Code (Smart Branching)
+        uses: actions/checkout@v4
+        with:
+          # Si el disparador fue el 'schedule' (cron), fuerza la descarga de 'prod'. 
+          # Si fue un 'push', usa la rama donde se hizo el push.
+          ref: ${{ github.event_name == 'schedule' && 'prod' || github.ref }}
 
       # --- REQUISITOS DEL SISTEMA ---
       - name: Setup Java (Para Allure Report)
