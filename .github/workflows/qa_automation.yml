@@ -95,7 +95,13 @@ jobs:
           echo "🧪 1. Ejecutando pruebas base (SQLite en memoria)"
           echo "====================================================="
           # Forzamos SQLite sin importar lo que diga el .env
-          DB_CONNECTION=sqlite DB_DATABASE=:memory: php artisan test
+          touch database/testing.sqlite
+          
+          # 2. Migramos y poblamos específicamente ese archivo SQLite
+          DB_CONNECTION=sqlite DB_DATABASE=$(pwd)/database/testing.sqlite php artisan migrate:fresh --seed
+          
+          # 3. Disparamos los tests contra el archivo ya preparado
+          DB_CONNECTION=sqlite DB_DATABASE=$(pwd)/database/testing.sqlite QUEUE_CONNECTION=sync php artisan test
           
           echo "====================================================="
           echo "🏃‍♂️ 2. Ejecutando pruebas en modo SÍNCRONO (MySQL - sync)"
