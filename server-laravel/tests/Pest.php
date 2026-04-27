@@ -14,7 +14,26 @@
 uses(
     Tests\TestCase::class,
     Illuminate\Foundation\Testing\DatabaseTransactions::class,
-)->in('Feature', 'Unit');
+)
+->beforeEach(function () {
+    if (class_exists(\Qameta\Allure\Allure::class)) {
+        $db = env('DB_CONNECTION', 'unknown');
+        $queue = env('QUEUE_CONNECTION', 'unknown');
+        
+        \Qameta\Allure\Allure::label('db_connection', $db);
+        \Qameta\Allure\Allure::label('queue_connection', $queue);
+        
+        $testType = 'Desconocido';
+        if ($db === 'sqlite') {
+            $testType = 'SQLite Memory';
+        } elseif ($db === 'mysql') {
+            $testType = ($queue === 'sync') ? 'MySQL Síncrono' : 'MySQL Asíncrono';
+        }
+        
+        \Qameta\Allure\Allure::label('test_mode', $testType);
+    }
+})
+->in('Feature', 'Unit');
 
 /*
 |--------------------------------------------------------------------------
