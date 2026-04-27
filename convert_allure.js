@@ -13,6 +13,11 @@ function getLabelValue(labels, name) {
     return label ? label.value : '';
 }
 
+function formatForSheets(isoString) {
+    if (!isoString) return '';
+    return isoString.replace('T', ' ').split('.')[0];
+}
+
 const allResults = [];
 
 resultsDirs.forEach(dir => {
@@ -29,8 +34,8 @@ resultsDirs.forEach(dir => {
                 const content = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
 
                 const startTimestamp = content.start || 0;
-                const start = startTimestamp ? new Date(startTimestamp).toISOString() : '';
-                const stop = content.stop ? new Date(content.stop).toISOString() : '';
+                const start = startTimestamp ? formatForSheets(new Date(startTimestamp).toISOString()) : '';
+                const stop = content.stop ? formatForSheets(new Date(content.stop).toISOString()) : '';
                 const duration = (content.start && content.stop) ? (content.stop - content.start) : 0;
 
                 let framework = getLabelValue(content.labels || [], 'framework');
@@ -81,15 +86,12 @@ if (allResults.length === 0) {
 // Sort by timestamp to identify runs
 allResults.sort((a, b) => a.startTimestamp - b.startTimestamp);
 
-// Group into runs based on time gaps (e.g., 4 minutes = 240,000 ms)
-let currentRun = 1;
-const RUN_GAP_MS = 240000;
+
+const runNumber = process.env.GITHUB_RUN_NUMBER || Date.now();
+const testRunLabel = `Ejecución ${runNumber}`;
 
 for (let i = 0; i < allResults.length; i++) {
-    if (i > 0 && (allResults[i].startTimestamp - allResults[i - 1].startTimestamp) > RUN_GAP_MS) {
-        currentRun++;
-    }
-    allResults[i].test_run = `Ejecución ${currentRun}`;
+    allResults[i].test_run = testRunLabel;
 }
 
 const headers = Object.keys(allResults[0]).filter(h => h !== 'startTimestamp');
@@ -98,5 +100,6 @@ const csvRows = [
     ...allResults.map(row => headers.map(header => `"${row[header]}"`).join(','))
 ];
 
-fs.writeFileSync(outputFile, csvRows.join('\n'), 'utf-8');
-console.log(`Successfully created ${outputFile} with ${allResults.length} records across ${currentRun} runs.`);
+const csvContent = '\ufeff' + csvRows.join('\n');
+fs.writeFileSync(outputFile, csvContent, 'utf-8');
+console.log(`Successfully created ${outputFile} with ${allResults.length} records for Run ${runNumber}.`);
