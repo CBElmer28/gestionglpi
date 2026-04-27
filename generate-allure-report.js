@@ -8,7 +8,7 @@ const { execSync } = require('child_process');
 
 const rootDir = process.cwd();
 const resultsDirs = [
-    path.join(rootDir, 'server-laravel', 'allure-results'),
+    path.join(rootDir, 'server-laravel', 'build', 'allure-results'),
     path.join(rootDir, 'client', 'allure-results')
 ];
 const reportDir = path.join(rootDir, 'allure-report');
@@ -34,10 +34,10 @@ resultsDirs.forEach(dir => {
     if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
     }
-    
+
     // Escribir environment.properties
     fs.writeFileSync(path.join(dir, 'environment.properties'), envContent);
-    
+
     // 2. Inyectar Categorías y Historial
     const categoriesFile = path.join(rootDir, 'categories.json');
     if (fs.existsSync(categoriesFile)) {
@@ -49,7 +49,7 @@ resultsDirs.forEach(dir => {
         if (!fs.existsSync(targetHistory)) {
             fs.mkdirSync(targetHistory, { recursive: true });
         }
-        
+
         const files = fs.readdirSync(historyDir);
         files.forEach(file => {
             fs.copyFileSync(path.join(historyDir, file), path.join(targetHistory, file));
@@ -62,7 +62,7 @@ resultsDirs.forEach(dir => {
 console.log('\n🔨 Generando reporte consolidado...');
 try {
     execSync(`npx allure-commandline generate ${resultsDirs.map(d => `"${d}"`).join(' ')} --clean -o "${reportDir}"`, { stdio: 'inherit' });
-    
+
     // 4. Inyectar Personalización Visual (CSS)
     console.log('\n🎨 Aplicando mejoras visuales y leyendas descriptivas...');
     const customCss = `
@@ -90,7 +90,7 @@ try {
             color: #fff;
         }
     `;
-    
+
     const cssPath = path.join(reportDir, 'styles.css');
     if (fs.existsSync(cssPath)) {
         fs.appendFileSync(cssPath, customCss);

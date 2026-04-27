@@ -3,7 +3,7 @@ const path = require('path');
 
 const resultsDirs = [
     path.join(__dirname, 'client', 'allure-results'),
-    path.join(__dirname, 'server-laravel', 'allure-results')
+    path.join(__dirname, 'server-laravel', 'build', 'allure-results')
 ];
 
 const outputFile = path.join(__dirname, 'allure_results_summary.csv');
@@ -138,7 +138,7 @@ const testRunLabel = `Ejecución ${runNumber}`;
 
 for (let i = 0; i < allResults.length; i++) {
     allResults[i].test_run = testRunLabel;
-    
+
     // Si es frontend, cambiamos "Predeterminado" por "Frontend" para que sea más claro
     if (allResults[i].framework === 'vitest' || allResults[i].framework === 'playwright') {
         if (allResults[i].test_mode === 'Predeterminado') {
