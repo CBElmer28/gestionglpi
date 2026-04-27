@@ -10,7 +10,20 @@ use Tests\TestCase;
 
 class DatabaseSeederTest extends TestCase
 {
-    use RefreshDatabase;
+    /**
+     * IMPORTANTE: Hemos eliminado RefreshDatabase para evitar borrados accidentales
+     * de la base de datos local 'mysql' durante las pruebas de rendimiento.
+     */
+    
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // BLOQUEO DE SEGURIDAD: Evitar que este test corra en la base de datos real 'mysql'
+        if (config('database.default') === 'mysql') {
+            $this->markTestSkipped('TEST BLOQUEADO: No se permite ejecutar DatabaseSeederTest en la conexión MySQL principal por seguridad de los datos.');
+        }
+    }
 
     /**
      * Verifica que el seeder principal se ejecute sin errores y pueble las tablas.

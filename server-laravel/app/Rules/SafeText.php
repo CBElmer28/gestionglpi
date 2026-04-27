@@ -55,5 +55,11 @@ class SafeText implements ValidationRule
                 return;
             }
         }
+
+        // 5. Bloquear secuencias Hexadecimales sospechosas (Bypass de SQLi)
+        if (preg_match('/^0x[0-9a-fA-F]+$/', $value)) {
+            $fail('El campo :attribute contiene codificación hexadecimal no permitida.');
+            return;
+        }
     }
 }

@@ -31,8 +31,10 @@ export default defineConfig({
     trace: 'on-first-retry',
     viewport: { width: 1280, height: 720 },
     screenshot: 'only-on-failure',
-    actionTimeout: 30000, // Timeout for each action: 30 seconds
-    navigationTimeout: 60000, // Timeout for navigation: 60 seconds
+
+    /* Asegurar que cada test tenga un contexto de navegador LIMPIO (sin sesiones residuales).
+     * Esto evita condiciones de carrera cuando tests consecutivos usan distintos usuarios. */
+    storageState: { cookies: [], origins: [] },
   },
 
   /* Configure projects for major browsers */

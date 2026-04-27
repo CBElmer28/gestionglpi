@@ -42,7 +42,7 @@
             <label class="filter-label">ISBN</label>
             <div class="search-input">
               <span class="search-input-icon"><font-awesome-icon icon="barcode" /></span>
-              <input v-model="filters.isbn" type="text" class="form-control" placeholder="978-..." />
+              <input v-model="filters.isbn" type="text" class="form-control" placeholder="978..." />
             </div>
           </div>
 
@@ -195,7 +195,7 @@
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">ISBN *</label>
-              <input v-model="modal.form.isbn" type="text" class="form-control" placeholder="978-XXXXXXXXXX" />
+              <input v-model="modal.form.isbn" type="text" class="form-control" placeholder="9780000000000" maxlength="13" pattern="978[0-9]{10}" title="El ISBN debe tener exactamente 13 dígitos y empezar por 978" />
               <span v-if="modal.errors.isbn" class="form-error">{{ modal.errors.isbn[0] }}</span>
             </div>
             <div class="form-group">
