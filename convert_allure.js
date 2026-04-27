@@ -33,7 +33,7 @@ function formatForSheets(isoString) {
  * Clasifica un test según las reglas de categories.json
  */
 function matchCategory(status, message) {
-    if (status === 'passed') return '✅ Éxito';
+    if (status === 'passed') return 'Éxito';
     if (!message) return 'N/A';
 
     for (const cat of categories) {
