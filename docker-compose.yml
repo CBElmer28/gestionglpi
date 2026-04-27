@@ -31,6 +31,20 @@ services:
     volumes:
       # Uso de volumen nombrado para evitar problemas de permisos en Linux/EC2
       - glpi_data_prod:/var/www/html/glpi
+  
+  mailpit:
+    image: axllent/mailpit
+    container_name: mailpit-prod
+    restart: always
+    environment:
+      - MP_UI_AUTH=${MAILPIT_UI_USER}:${MAILPIT_UI_PASS}
+      - MP_DATA_FILE=/data/mailpit.db
+    volumes:
+      - mailpit_data:/data
+    deploy:
+      resources:
+        limits:
+          memory: 256M # Límite de seguridad para AWS
 
   # 4. Automatización con n8n
   n8n:
@@ -62,3 +76,4 @@ services:
 volumes:
   glpi_data_prod:
   n8n_storage_prod:
+  mailpit_data:
