@@ -132,11 +132,19 @@ if (allResults.length === 0) {
 // Ordenar por timestamp para mantener coherencia cronológica
 allResults.sort((a, b) => a.startTimestamp - b.startTimestamp);
 
-const runNumber = process.env.GITHUB_RUN_NUMBER || Date.now();
+const rawRunNumber = process.env.GITHUB_RUN_NUMBER;
+const runNumber = (rawRunNumber && rawRunNumber.trim() !== '') ? rawRunNumber : Date.now();
 const testRunLabel = `Ejecución ${runNumber}`;
 
 for (let i = 0; i < allResults.length; i++) {
     allResults[i].test_run = testRunLabel;
+    
+    // Si es frontend, cambiamos "Predeterminado" por "Frontend" para que sea más claro
+    if (allResults[i].framework === 'vitest' || allResults[i].framework === 'playwright') {
+        if (allResults[i].test_mode === 'Predeterminado') {
+            allResults[i].test_mode = 'Frontend';
+        }
+    }
 }
 
 // Generar encabezados dinámicamente basándose en el primer objeto

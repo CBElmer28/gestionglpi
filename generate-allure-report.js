@@ -16,18 +16,8 @@ const historyDir = path.join(reportDir, 'history');
 
 console.log('\n📊 Iniciando orquestación de reporte Allure...\n');
 
-// Función para limpiar resultados antiguos (evita que Allure sume tiempos de ejecuciones pasadas)
-function cleanOldResults(dir) {
-    if (fs.existsSync(dir)) {
-        const files = fs.readdirSync(dir);
-        files.forEach(file => {
-            // Solo borrar resultados y contenedores, NO la carpeta history que inyectaremos
-            if (file.endsWith('.json') || file.endsWith('.xml') || file.endsWith('.txt')) {
-                fs.unlinkSync(path.join(dir, file));
-            }
-        });
-    }
-}
+// La limpieza de resultados antiguos debe hacerse ANTES de correr los tests,
+// no aquí, porque esto borraría los resultados que los tests acaban de generar.
 
 // 1. Preparar metadatos de entorno
 const envContent = `
@@ -44,9 +34,6 @@ resultsDirs.forEach(dir => {
     if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
     }
-    
-    // Limpiar resultados previos para evitar acumulación
-    cleanOldResults(dir);
     
     // Escribir environment.properties
     fs.writeFileSync(path.join(dir, 'environment.properties'), envContent);
