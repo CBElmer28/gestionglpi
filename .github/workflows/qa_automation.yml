@@ -101,13 +101,13 @@ jobs:
           echo "🏃‍♂️ 2. Ejecutando pruebas en modo SÍNCRONO (MySQL - sync)"
           echo "====================================================="
           # Usamos la BD de MariaDB que creamos en los services
-          DB_CONNECTION=mysql DB_DATABASE=laravel_biblioteca QUEUE_CONNECTION=sync php artisan test
+          DB_CONNECTION=mysql DB_DATABASE=laravel_biblioteca DB_USERNAME=user_local DB_PASSWORD=pass_local QUEUE_CONNECTION=sync php artisan test
           
           echo "====================================================="
           echo "⏳ 3. Ejecutando pruebas en modo ASÍNCRONO (MySQL - database)"
           echo "====================================================="
           # Probamos la lógica de Workers y Jobs
-          DB_CONNECTION=mysql DB_DATABASE=laravel_biblioteca QUEUE_CONNECTION=database php artisan test
+          DB_CONNECTION=mysql DB_DATABASE=laravel_biblioteca DB_USERNAME=user_local DB_PASSWORD=pass_local QUEUE_CONNECTION=database php artisan test
           
       # --- PREPARACIÓN PARA FRONTEND Y E2E ---
       - name: Reset and Seed DB for E2E
