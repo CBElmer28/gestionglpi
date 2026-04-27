@@ -29,14 +29,8 @@ class BookService
         // 1. Crear en la BD local (fuente de verdad)
         $book = $this->bookRepository->create($data);
 
-        // 2. Sincronizar con GLPI
-        $preparedData = $this->prepareBookForGlpi($book);
-        $glpiResult = $this->glpiService->createBook($preparedData);
-        
-        if ($glpiResult && isset($glpiResult['id'])) {
-            $this->bookRepository->updateGlpiId($book->id, $glpiResult['id']);
-            $book->glpi_id = $glpiResult['id'];
-        }
+        // 2. Despachar sincronización asíncrona con GLPI
+        \App\Jobs\SyncBookToGlpi::dispatch($book, 'create');
 
         return $book;
     }
@@ -45,10 +39,9 @@ class BookService
     {
         $book = $this->bookRepository->update($id, $data);
 
-        // Sincronizar actualización en GLPI si tiene glpi_id
+        // 2. Despachar actualización asíncrona si tiene glpi_id
         if ($book->glpi_id) {
-            $preparedData = $this->prepareBookForGlpi($book);
-            $this->glpiService->updateBook($book->glpi_id, $preparedData);
+            \App\Jobs\SyncBookToGlpi::dispatch($book, 'update');
         }
 
         return $book;
@@ -59,7 +52,8 @@ class BookService
         $book = $this->bookRepository->find($id);
 
         if ($book && $book->glpi_id) {
-            $this->glpiService->deleteBook($book->glpi_id);
+            // Despachamos el borrado asíncrono pasando el glpi_id explícitamente
+            \App\Jobs\SyncBookToGlpi::dispatch(null, 'delete', $book->glpi_id);
         }
 
         return $this->bookRepository->delete($id);

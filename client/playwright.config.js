@@ -27,6 +27,10 @@ export default defineConfig({
     trace: 'on-first-retry',
     viewport: { width: 1280, height: 720 },
     screenshot: 'only-on-failure',
+
+    /* Asegurar que cada test tenga un contexto de navegador LIMPIO (sin sesiones residuales).
+     * Esto evita condiciones de carrera cuando tests consecutivos usan distintos usuarios. */
+    storageState: { cookies: [], origins: [] },
   },
 
   /* Configure projects for major browsers */

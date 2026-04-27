@@ -20,7 +20,7 @@ beforeEach(function () {
 
 test('system rejects XSS payloads in book titles', function () {
     $payload = [
-        'isbn' => '123',
+        'isbn' => '978' . str_pad(mt_rand(0, 9999999999), 10, '0', STR_PAD_LEFT),
         'title' => '<script>alert("hack")</script>',
         'author' => 'Malicious User',
         'edition' => '1st',
@@ -52,7 +52,7 @@ test('system rejects SQL comments in ISBN field', function () {
 
 test('system rejects multi-statement SQL injection signatures', function () {
     $payload = [
-        'isbn' => '123',
+        'isbn' => '978' . str_pad(mt_rand(0, 9999999999), 10, '0', STR_PAD_LEFT),
         'title' => 'Valid Title',
         'author' => 'Author; DROP TABLE users',
         'edition' => '1st',
@@ -67,12 +67,12 @@ test('system rejects multi-statement SQL injection signatures', function () {
 });
 
 test('system allows legitimate special characters like quotes in titles', function () {
-    // Crear maestros para que no falle por FK
-    $genre = Genre::create(['id' => 1, 'name' => 'Tech', 'glpi_id' => 101]);
-    $publisher = Publisher::create(['id' => 1, 'name' => "O'Reilly", 'glpi_id' => 102]);
+    // Usar datos existentes o crear para que no falle por FK y no duplique IDs
+    $genre = Genre::updateOrCreate(['id' => 1], ['name' => 'Tech', 'glpi_id' => 101]);
+    $publisher = Publisher::updateOrCreate(['id' => 1], ['name' => "O'Reilly", 'glpi_id' => 102]);
 
     $payload = [
-        'isbn' => '978-123',
+        'isbn' => '978' . str_pad(mt_rand(0, 9999999999), 10, '0', STR_PAD_LEFT),
         'title' => "O'Reilly Media",
         'author' => "Shaun Wilkinson",
         'edition' => '1st',

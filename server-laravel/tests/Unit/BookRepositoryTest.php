@@ -25,18 +25,20 @@ test('it filters books by genre', function () {
 });
 
 test('it filters books by status', function () {
+    $existing = Book::where('status', 'Disponible')->count();
+
     Book::factory()->count(3)->create(['status' => 'Disponible']);
     Book::factory()->count(2)->create(['status' => 'Prestado']);
 
     $results = $this->repository->all(['status' => 'Disponible']);
 
-    expect($results->total())->toBe(3);
+    expect($results->total())->toBe($existing + 3);
 });
 
 test('it filters books by global query', function () {
     Book::factory()->create(['title' => 'Quijote de la Mancha']);
     Book::factory()->create(['author' => 'Miguel de Cervantes']);
-    Book::factory()->create(['isbn' => '9876543210']);
+    Book::factory()->create(['isbn' => '9780000000000']);
     Book::factory()->create(['title' => 'Otro Libro']);
 
     // Búsqueda por título
@@ -49,12 +51,13 @@ test('it filters books by global query', function () {
 });
 
 test('it returns all records without pagination', function () {
+    $existing = Book::count();
     Book::factory()->count(15)->create();
 
     $results = $this->repository->all(['per_page' => 'all']);
 
     expect($results)->toBeInstanceOf(Collection::class);
-    expect($results)->toHaveCount(15);
+    expect($results)->toHaveCount($existing + 15);
 });
 
 test('it filters by multiple criteria', function () {

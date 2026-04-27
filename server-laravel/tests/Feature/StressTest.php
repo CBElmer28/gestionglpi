@@ -85,3 +85,52 @@ test('sequential requests burst handling capacity', function () {
 
     expect($totalBurst)->toBeLessThan(5);
 });
+
+test('discovery of synchronous GLPI synchronization limit', function () {
+    Allure::story('Punto de Quiebre GLPI');
+    Allure::description('Busca el límite de libros que el sistema puede sincronizar antes de superar los 20 segundos.');
+    Allure::severity(Severity::critical());
+
+    $bookService = app(\App\Services\BookService::class);
+    $genre = Genre::first() ?? Genre::factory()->create();
+    $publisher = Publisher::first() ?? Publisher::factory()->create();
+    
+    $steps = [10, 50, 100, 200];
+    echo "\n[STRESS] Buscando límite sincrónico de GLPI...\n";
+
+    foreach ($steps as $count) {
+        $createdIds = [];
+        $start = microtime(true);
+
+        try {
+            for ($i = 0; $i < $count; $i++) {
+                $book = $bookService->create([
+                    'isbn' => '978' . str_pad($count . $i, 10, '0', STR_PAD_LEFT),
+                    'title' => 'Libro Stress ' . $i,
+                    'author' => 'Stress Bot',
+                    'edition' => '2026',
+                    'genre_id' => $genre->id,
+                    'publisher_id' => $publisher->id,
+                    'status' => 'Disponible'
+                ]);
+                $createdIds[] = $book->id;
+            }
+            
+            $totalTime = round(microtime(true) - $start, 2);
+            echo " >> Bloque {$count} libros: {$totalTime}s\n";
+
+            // Limpieza
+            foreach ($createdIds as $id) {
+                $bookService->delete($id);
+            }
+
+            if ($totalTime > 20) {
+                echo "[!] Límite alcanzado con {$count} libros ({$totalTime}s)\n";
+                break;
+            }
+        } catch (\Exception $e) {
+            echo "[X] Fallo con {$count} libros: " . $e->getMessage() . "\n";
+            break;
+        }
+    }
+});
