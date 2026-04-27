@@ -229,6 +229,8 @@ class GlpiService
                 'input' => [
                     'name'                => $bookData['title'] ?? 'Nuevo Libro',
                     'states_id'           => $bookData['glpi_status_id'] ?? 1,
+                    'entities_id'         => 0, // Entidad Raíz obligatoria para GLPI
+                    'is_recursive'        => 1, // Permite visibilidad en sub-entidades
                     'custom_titulo'       => $bookData['title'] ?? '',
                     'custom_autor'        => $bookData['author'] ?? '',
                     'custom_isbn'         => $bookData['isbn'] ?? '',
@@ -243,7 +245,27 @@ class GlpiService
             $response = $this->request('POST', $this->bookEndpoint(), ['json' => $payload]);
 
             if ($response->successful()) {
-                return $response->json();
+                $glpiResult = $response->json();
+                
+                // PARCHE: La API del plugin CustomAsset de GLPI ignora los Dropdowns en el POST (creación).
+                // Para solucionar esto, enviamos inmediatamente un PUT minimalista SOLO con los Dropdowns.
+                if (isset($glpiResult['id']) && (!empty($payload['input']['custom_genero']) || !empty($payload['input']['custom_editorial']))) {
+                    $patchPayload = ['input' => ['id' => $glpiResult['id']]];
+                    if (!empty($payload['input']['custom_genero'])) {
+                        $patchPayload['input']['custom_genero'] = $payload['input']['custom_genero'];
+                    }
+                    if (!empty($payload['input']['custom_editorial'])) {
+                        $patchPayload['input']['custom_editorial'] = $payload['input']['custom_editorial'];
+                    }
+                    
+                    sleep(1);
+                    $patchResponse = $this->request('PUT', "{$this->bookEndpoint()}/{$glpiResult['id']}", ['json' => $patchPayload]);
+                    if (!$patchResponse->successful()) {
+                        Log::warning('GLPI dropdown patch failed on create', ['status' => $patchResponse->status(), 'id' => $glpiResult['id']]);
+                    }
+                }
+
+                return $glpiResult;
             }
 
             Log::warning('GLPI createBook failed', [
@@ -268,6 +290,8 @@ class GlpiService
                     'id'                  => $glpiId,
                     'name'                => ($bookData['title'] ?? '') . ' — ' . ($bookData['author'] ?? ''),
                     'states_id'           => $bookData['glpi_status_id'] ?? 1,
+                    'entities_id'         => 0, // Entidad Raíz obligatoria para GLPI
+                    'is_recursive'        => 1, // Permite visibilidad en sub-entidades
                     'custom_titulo'       => $bookData['title'] ?? '',
                     'custom_autor'        => $bookData['author'] ?? '',
                     'custom_isbn'         => $bookData['isbn'] ?? '',
@@ -280,7 +304,29 @@ class GlpiService
             ];
 
             $response = $this->request('PUT', "{$this->bookEndpoint()}/{$glpiId}", ['json' => $payload]);
-            return $response->successful();
+            
+            if ($response->successful()) {
+                // PARCHE: Al igual que en createBook, la actualización masiva ignora los Dropdowns.
+                // Aplicamos el parche minimalista inmediatamente después de actualizar.
+                if (!empty($payload['input']['custom_genero']) || !empty($payload['input']['custom_editorial'])) {
+                    $patchPayload = ['input' => ['id' => $glpiId]];
+                    if (!empty($payload['input']['custom_genero'])) {
+                        $patchPayload['input']['custom_genero'] = $payload['input']['custom_genero'];
+                    }
+                    if (!empty($payload['input']['custom_editorial'])) {
+                        $patchPayload['input']['custom_editorial'] = $payload['input']['custom_editorial'];
+                    }
+                    
+                    sleep(1);
+                    $patchResponse = $this->request('PUT', "{$this->bookEndpoint()}/{$glpiId}", ['json' => $patchPayload]);
+                    if (!$patchResponse->successful()) {
+                        Log::warning("GLPI dropdown patch failed on update {$glpiId}", ['status' => $patchResponse->status()]);
+                    }
+                }
+                return true;
+            }
+            
+            return false;
         } catch (\Exception $e) {
             Log::error('GLPI updateBook error', ['error' => $e->getMessage()]);
             return false;

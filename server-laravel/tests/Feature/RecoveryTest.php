@@ -22,7 +22,7 @@ beforeEach(function () {
     $this->book = Book::create([
         'title' => 'Libro Resiliente',
         'author' => 'Test',
-        'isbn' => '999-RECOVERY',
+        'isbn' => '978' . str_pad(mt_rand(0, 9999999999), 10, '0', STR_PAD_LEFT),
         'genre_id' => $genre->id,
         'publisher_id' => $publisher->id,
         'status' => 'Disponible',
