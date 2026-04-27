@@ -4,7 +4,8 @@ on:
   push:
     branches: [ main, prod ]
   schedule:
-    - cron: '0 */4 * * *' # Ejecución automática cada medianoche
+    - cron: '0 */4 * * *' # Ejecución automática cada 4 horas
+  workflow_dispatch: # Botón de ejecución manual
 
 jobs:
   test-and-report:
@@ -16,7 +17,7 @@ jobs:
         image: mariadb:10.11
         env:
           MYSQL_ROOT_PASSWORD: root_pass
-          MYSQL_DATABASE: laravel_biblioteca # Crea la DB automáticamente
+          MYSQL_DATABASE: laravel_biblioteca # Nombre de DB en la nube
           MYSQL_USER: user_local
           MYSQL_PASSWORD: pass_local
         ports:
@@ -47,13 +48,14 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
-          extensions: dom, curl, libxml, mbstring, zip, pdo_mysql # Necesitas pdo_mysql
+          extensions: dom, curl, libxml, mbstring, zip, pdo_mysql
 
       - name: Install Laravel Dependencies & Setup DB
         run: |
           cd server-laravel
           composer install --prefer-dist --no-progress
           
+          # Creamos el .env base para la nube
           cat <<EOF > .env
           APP_NAME=Laravel
           APP_ENV=testing
@@ -81,22 +83,46 @@ jobs:
           
           php artisan key:generate
           
+          # Migración inicial
           php artisan migrate --seed
-      - name: Run Backend Tests (Pest/PHPUnit)
+
+      # 🚨 LA MAGIA DE LA REGRESIÓN DE BACKEND ESTÁ AQUÍ 🚨
+      - name: Run Backend Tests (Regression Suite)
         run: |
           cd server-laravel
-          php artisan test
           
+          echo "====================================================="
+          echo "🧪 1. Ejecutando pruebas base (SQLite en memoria)"
+          echo "====================================================="
+          # Forzamos SQLite sin importar lo que diga el .env
+          DB_CONNECTION=sqlite DB_DATABASE=:memory: php artisan test
+          
+          echo "====================================================="
+          echo "🏃‍♂️ 2. Ejecutando pruebas en modo SÍNCRONO (MySQL - sync)"
+          echo "====================================================="
+          # Usamos la BD de MariaDB que creamos en los services
+          DB_CONNECTION=mysql DB_DATABASE=laravel_biblioteca QUEUE_CONNECTION=sync php artisan test
+          
+          echo "====================================================="
+          echo "⏳ 3. Ejecutando pruebas en modo ASÍNCRONO (MySQL - database)"
+          echo "====================================================="
+          # Probamos la lógica de Workers y Jobs
+          DB_CONNECTION=mysql DB_DATABASE=laravel_biblioteca QUEUE_CONNECTION=database php artisan test
+          
+      # --- PREPARACIÓN PARA FRONTEND Y E2E ---
       - name: Reset and Seed DB for E2E
         run: |
           cd server-laravel
           
+          # Destruimos el testing local si existe
           rm -f .env.testing
           
           php artisan config:clear
           php artisan cache:clear
           
+          # Limpiamos todo el rastro de las 3 pruebas anteriores y preparamos para E2E
           php artisan migrate:fresh --seed
+
       - name: Start Laravel Server for E2E
         run: |
           cd server-laravel
