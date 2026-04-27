@@ -3,7 +3,7 @@ const path = require('path');
 
 const resultsDirs = [
     path.join(__dirname, 'client', 'allure-results'),
-    path.join(__dirname, 'server-laravel', 'build', 'allure-results')
+    path.join(__dirname, 'server-laravel', 'allure-results')
 ];
 
 const outputFile = path.join(__dirname, 'allure_results_summary.csv');

@@ -8,7 +8,7 @@ const { execSync } = require('child_process');
 
 const rootDir = process.cwd();
 const resultsDirs = [
-    path.join(rootDir, 'server-laravel', 'build', 'allure-results'),
+    path.join(rootDir, 'server-laravel', 'allure-results'),
     path.join(rootDir, 'client', 'allure-results')
 ];
 const reportDir = path.join(rootDir, 'allure-report');
@@ -44,6 +44,9 @@ resultsDirs.forEach(dir => {
     if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
     }
+    
+    // Limpiar resultados previos para evitar acumulación
+    cleanOldResults(dir);
     
     // Escribir environment.properties
     fs.writeFileSync(path.join(dir, 'environment.properties'), envContent);

@@ -17,20 +17,22 @@ uses(
 )
 ->beforeEach(function () {
     if (class_exists(\Qameta\Allure\Allure::class)) {
-        $db = env('DB_CONNECTION', 'unknown');
-        $queue = env('QUEUE_CONNECTION', 'unknown');
-        
+        // Priorizar $_SERVER o getenv() para CI
+        $db = $_SERVER['DB_CONNECTION'] ?? getenv('DB_CONNECTION') ?? config('database.default');
+        $queue = $_SERVER['QUEUE_CONNECTION'] ?? getenv('QUEUE_CONNECTION') ?? config('queue.default');
+
         \Qameta\Allure\Allure::label('db_connection', $db);
         \Qameta\Allure\Allure::label('queue_connection', $queue);
-        
-        $testType = 'Desconocido';
+
+        // Lógica de Test Mode para el CSV
+        $testMode = 'Predeterminado';
         if ($db === 'sqlite') {
-            $testType = 'SQLite Memory';
+            $testMode = 'Síncrona (SQLite)';
         } elseif ($db === 'mysql') {
-            $testType = ($queue === 'sync') ? 'MySQL Síncrono' : 'MySQL Asíncrono';
+            $testMode = ($queue === 'sync') ? 'Síncrona (MySQL)' : 'Asíncrona (MySQL)';
         }
-        
-        \Qameta\Allure\Allure::label('test_mode', $testType);
+
+        \Qameta\Allure\Allure::label('test_mode', $testMode);
     }
 })
 ->in('Feature', 'Unit');
