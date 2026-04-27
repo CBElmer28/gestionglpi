@@ -12,11 +12,21 @@ abstract class TestCase extends BaseTestCase
     {
         parent::setUp();
 
-        // Con SQLite en memoria las tablas no existen todavía.
-        // Corremos las migraciones automáticamente para que DatabaseTransactions
-        // pueda envolver los tests correctamente sin afectar datos reales.
-        if (config('database.default') === 'sqlite') {
-            $this->artisan('migrate');
+        if (class_exists(\Qameta\Allure\Allure::class)) {
+            
+            $db = config('database.default');
+            $queue = config('queue.default');
+
+            $testMode = 'Predeterminado';
+            if ($db === 'sqlite') {
+                $testMode = 'Síncrona (SQLite)';
+            } elseif ($db === 'mysql') {
+                $testMode = ($queue === 'sync') ? 'Síncrona (MySQL)' : 'Asíncrona (MySQL)';
+            }
+
+            \Qameta\Allure\Allure::label('test_mode', $testMode);
+            \Qameta\Allure\Allure::label('db_connection', $db);
+            \Qameta\Allure\Allure::label('queue_connection', $queue);
         }
     }
 }
