@@ -91,23 +91,28 @@ jobs:
         run: |
           cd server-laravel
           
-          # 1. Creamos el inyector como .cjs (CommonJS) para evitar conflictos con Laravel/Vite
+          # 1. Inyector mejorado leyendo Variables de Entorno (Estilo export)
           cat << 'EOF' > tagger.cjs
           const fs = require('fs');
           const path = require('path');
-          const dir = process.argv[2];
-          const mode = process.argv[3];
-          const db = process.argv[4];
-          const queue = process.argv[5];
           
-          if (fs.existsSync(dir)) {
-              fs.readdirSync(dir).forEach(file => {
+          // Leemos las variables exportadas directamente del entorno
+          const mode = process.env.TEST_MODE;
+          const db = process.env.TEST_DB;
+          const queue = process.env.TEST_QUEUE;
+          
+          // Buscamos la carpeta dinámicamente en tiempo real
+          const dirs = ['build/allure-results', 'allure-results'];
+          const targetDir = dirs.find(d => fs.existsSync(d));
+          
+          if (targetDir) {
+              fs.readdirSync(targetDir).forEach(file => {
                   if (file.endsWith('-result.json')) {
-                      const p = path.join(dir, file);
+                      const p = path.join(targetDir, file);
                       const data = JSON.parse(fs.readFileSync(p, 'utf8'));
                       if (!data.labels) data.labels = [];
                       
-                      // Solo etiquetamos si este test NO ha sido etiquetado antes
+                      // Inyectamos si está vacío
                       if (!data.labels.some(l => l.name === 'test_mode')) {
                           data.labels.push({name: 'test_mode', value: mode});
                           data.labels.push({name: 'db_connection', value: db});
@@ -118,31 +123,57 @@ jobs:
               });
           }
           EOF
-          
-          # Detectamos dónde guarda Allure los JSONs
-          ALLURE_DIR="allure-results"
-          [ -d "build/allure-results" ] && ALLURE_DIR="build/allure-results"
 
           echo "====================================================="
           echo "🧪 1. Ejecutando pruebas base (SQLite en archivo físico)"
           echo "====================================================="
           touch database/testing.sqlite
-          DB_CONNECTION=sqlite DB_DATABASE=$(pwd)/database/testing.sqlite php artisan migrate:fresh --seed
-          DB_CONNECTION=sqlite DB_DATABASE=$(pwd)/database/testing.sqlite QUEUE_CONNECTION=sync php artisan test
-          # Ejecutamos el archivo .cjs
-          node tagger.cjs $ALLURE_DIR "Síncrona (SQLite)" "sqlite" "sync"
+          
+          # Declaramos entorno Laravel
+          export DB_CONNECTION=sqlite 
+          export DB_DATABASE=$(pwd)/database/testing.sqlite 
+          export QUEUE_CONNECTION=sync
+          
+          php artisan migrate:fresh --seed
+          php artisan test
+          
+          # Declaramos entorno Node y ejecutamos
+          export TEST_MODE="Síncrona (SQLite)"
+          export TEST_DB="sqlite"
+          export TEST_QUEUE="sync"
+          node tagger.cjs
           
           echo "====================================================="
           echo "🏃‍♂️ 2. Ejecutando pruebas en modo SÍNCRONO (MySQL - sync)"
           echo "====================================================="
-          DB_CONNECTION=mysql DB_DATABASE=laravel_biblioteca DB_USERNAME=user_local DB_PASSWORD=pass_local QUEUE_CONNECTION=sync php artisan test
-          node tagger.cjs $ALLURE_DIR "Síncrona (MySQL)" "mysql" "sync"
+          export DB_CONNECTION=mysql 
+          export DB_DATABASE=laravel_biblioteca 
+          export DB_USERNAME=user_local 
+          export DB_PASSWORD=pass_local 
+          export QUEUE_CONNECTION=sync
+          
+          php artisan test
+          
+          export TEST_MODE="Síncrona (MySQL)"
+          export TEST_DB="mysql"
+          export TEST_QUEUE="sync"
+          node tagger.cjs
           
           echo "====================================================="
           echo "⏳ 3. Ejecutando pruebas en modo ASÍNCRONO (MySQL - database)"
           echo "====================================================="
-          DB_CONNECTION=mysql DB_DATABASE=laravel_biblioteca DB_USERNAME=user_local DB_PASSWORD=pass_local QUEUE_CONNECTION=database php artisan test
-          node tagger.cjs $ALLURE_DIR "Asíncrona (MySQL)" "mysql" "database"
+          export DB_CONNECTION=mysql 
+          export DB_DATABASE=laravel_biblioteca 
+          export DB_USERNAME=user_local 
+          export DB_PASSWORD=pass_local 
+          export QUEUE_CONNECTION=database
+          
+          php artisan test
+          
+          export TEST_MODE="Asíncrona (MySQL)"
+          export TEST_DB="mysql"
+          export TEST_QUEUE="database"
+          node tagger.cjs
           
       # --- PREPARACIÓN PARA FRONTEND Y E2E ---
       - name: Reset and Seed DB for E2E
