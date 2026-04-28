@@ -86,7 +86,6 @@ jobs:
           # Migración inicial
           php artisan migrate --seed
 
-      # 🚨 LA MAGIA DE LA REGRESIÓN DE BACKEND ESTÁ AQUÍ 🚨
       - name: Run Backend Tests (Regression Suite)
         run: |
           cd server-laravel
