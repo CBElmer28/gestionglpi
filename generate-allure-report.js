@@ -8,7 +8,7 @@ const { execSync } = require('child_process');
 
 const rootDir = process.cwd();
 const resultsDirs = [
-    path.join(rootDir, 'server-laravel', 'allure-results'),
+    path.join(rootDir, 'server-laravel', 'build', 'allure-results'),
     path.join(rootDir, 'client', 'allure-results')
 ];
 const reportDir = path.join(rootDir, 'allure-report');
@@ -16,18 +16,8 @@ const historyDir = path.join(reportDir, 'history');
 
 console.log('\n📊 Iniciando orquestación de reporte Allure...\n');
 
-// Función para limpiar resultados antiguos (evita que Allure sume tiempos de ejecuciones pasadas)
-function cleanOldResults(dir) {
-    if (fs.existsSync(dir)) {
-        const files = fs.readdirSync(dir);
-        files.forEach(file => {
-            // Solo borrar resultados y contenedores, NO la carpeta history que inyectaremos
-            if (file.endsWith('.json') || file.endsWith('.xml') || file.endsWith('.txt')) {
-                fs.unlinkSync(path.join(dir, file));
-            }
-        });
-    }
-}
+// La limpieza de resultados antiguos debe hacerse ANTES de correr los tests,
+// no aquí, porque esto borraría los resultados que los tests acaban de generar.
 
 // 1. Preparar metadatos de entorno
 const envContent = `
@@ -44,13 +34,10 @@ resultsDirs.forEach(dir => {
     if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
     }
-    
-    // Limpiar resultados previos para evitar acumulación
-    cleanOldResults(dir);
-    
+
     // Escribir environment.properties
     fs.writeFileSync(path.join(dir, 'environment.properties'), envContent);
-    
+
     // 2. Inyectar Categorías y Historial
     const categoriesFile = path.join(rootDir, 'categories.json');
     if (fs.existsSync(categoriesFile)) {
@@ -62,7 +49,7 @@ resultsDirs.forEach(dir => {
         if (!fs.existsSync(targetHistory)) {
             fs.mkdirSync(targetHistory, { recursive: true });
         }
-        
+
         const files = fs.readdirSync(historyDir);
         files.forEach(file => {
             fs.copyFileSync(path.join(historyDir, file), path.join(targetHistory, file));
@@ -75,7 +62,7 @@ resultsDirs.forEach(dir => {
 console.log('\n🔨 Generando reporte consolidado...');
 try {
     execSync(`npx allure-commandline generate ${resultsDirs.map(d => `"${d}"`).join(' ')} --clean -o "${reportDir}"`, { stdio: 'inherit' });
-    
+
     // 4. Inyectar Personalización Visual (CSS)
     console.log('\n🎨 Aplicando mejoras visuales y leyendas descriptivas...');
     const customCss = `
@@ -103,7 +90,7 @@ try {
             color: #fff;
         }
     `;
-    
+
     const cssPath = path.join(reportDir, 'styles.css');
     if (fs.existsSync(cssPath)) {
         fs.appendFileSync(cssPath, customCss);
