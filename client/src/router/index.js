@@ -1,6 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/store/auth'
 
+const ScannerView = () => import('@/views/ScannerView.vue')
+const ScansView   = () => import('@/views/ScansView.vue')
 const LoginView     = () => import('@/views/LoginView.vue')
 const DashboardView = () => import('@/views/DashboardView.vue')
 const BooksView     = () => import('@/views/BooksView.vue')
@@ -47,6 +49,18 @@ const router = createRouter({
       name: 'publishers',
       component: PublishersView,
       meta: { title: 'Editoriales', permission: 'catalog.manage' },
+    },
+        {
+      path: '/scanner',
+      name: 'scanner',
+      component: ScannerView,
+      meta: { title: 'Escáner', permission: 'books.manage' },
+    },
+    {
+      path: '/scans',
+      name: 'scans',
+      component: ScansView,
+      meta: { title: 'Libros escaneados', permission: 'books.manage' },
     },
     {
       path: '/loans',

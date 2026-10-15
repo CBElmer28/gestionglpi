@@ -1,0 +1,26 @@
+﻿# Dependencias y archivos locales
+vendor/
+node_modules/
+.env
+.env.*
+!.env.example
+!.env.testing
+
+# Git y herramientas
+.git/
+.github/
+.idea/
+.vscode/
+
+# Logs y cachés
+*.log
+.phpunit.cache/
+.phpunit.result.cache
+
+# Archivos de pruebas y reportes
+allure-results/
+allure-report/
+coverage/
+
+# Archivos temporales
+scratch/

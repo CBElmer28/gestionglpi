@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ScanController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BookController;
 use App\Http\Controllers\GlpiController;
@@ -37,6 +38,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/books/{id}', [BookController::class, 'update']);
         Route::delete('/books/{id}', [BookController::class, 'destroy']);
     });
+
+    // ── Escáner de libros ──
+    Route::get('/scans',  [ScanController::class, 'index'])->middleware('permission:books.view');
+    Route::post('/scans', [ScanController::class, 'store'])->middleware('permission:books.manage');
 
     // ── Préstamos ─────────────────────────────────────────────────────────
     Route::get('/loans', [LoanController::class, 'index']);

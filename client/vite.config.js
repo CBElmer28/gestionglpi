@@ -11,9 +11,9 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    allowedHosts: ['.trycloudflare.com'],
     proxy: {
-      // Opcional: proxy para evitar CORS en desarrollo
-      // '/api': { target: 'http://localhost:8000', changeOrigin: true },
+      '/api': { target: 'http://127.0.0.1:8000', changeOrigin: true },
     },
   },
   test: {
