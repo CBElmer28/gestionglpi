@@ -36,6 +36,7 @@ RUN composer install --no-dev --optimize-autoloader
 # 8. Asignar los permisos correctos
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+RUN ln -sfn /var/www/html/storage/app/public /var/www/html/public/storage
 
 # 9. Configurar VirtualHost y habilitar .htaccess (LA SOLUCIÓN AQUÍ)
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public

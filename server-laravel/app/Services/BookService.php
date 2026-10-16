@@ -162,18 +162,48 @@ class BookService
     }
 
     /**
-     * Sincroniza las editoriales desde GLPI.
+     * Sincroniza las editoriales con GLPI (bidireccional):
+     * 1. Sube editoriales locales sin glpi_id a GLPI.
+     * 2. Descarga/actualiza todas las editoriales desde GLPI.
      */
     public function syncPublishers(): array
     {
-        $glpiPublishers = $this->glpiService->listPublishers();
-        $synced = 0;
+        $uploaded = 0;
+        $synced   = 0;
 
-        foreach ($glpiPublishers as $p) {
-            // Intentar encontrar por glpi_id primero
+        // 1. Obtener lista actual en GLPI para cotejar por nombre
+        $glpiPublishers = $this->glpiService->listPublishers();
+        $glpiMapByName  = [];
+        foreach ($glpiPublishers as $gp) {
+            if (!empty($gp['name'])) {
+                $glpiMapByName[mb_strtolower(trim($gp['name']))] = (int) $gp['id'];
+            }
+        }
+
+        // 2. Editoriales locales pendientes de sincronizar con GLPI
+        $pendingPublishers = Publisher::whereNull('glpi_id')->get();
+        foreach ($pendingPublishers as $localPub) {
+            $key = mb_strtolower(trim($localPub->name));
+            if (isset($glpiMapByName[$key])) {
+                // Ya existía en GLPI con ese nombre
+                $localPub->update(['glpi_id' => $glpiMapByName[$key]]);
+                $uploaded++;
+            } else {
+                // Crear en GLPI
+                $newGlpiId = $this->glpiService->createPublisher($localPub->name);
+                if ($newGlpiId) {
+                    $localPub->update(['glpi_id' => $newGlpiId]);
+                    $glpiMapByName[$key] = $newGlpiId;
+                    $uploaded++;
+                }
+            }
+        }
+
+        // 3. Re-sincronizar catálogos desde GLPI
+        $refreshedGlpi = $this->glpiService->listPublishers();
+        foreach ($refreshedGlpi as $p) {
             $publisher = Publisher::where('glpi_id', $p['id'])->first();
-            
-            // Si no se encuentra, buscar por nombre para corregir posibles IDs corruptos
+
             if (!$publisher) {
                 $publisher = Publisher::where('name', $p['name'])->first();
             }
@@ -186,7 +216,10 @@ class BookService
             $synced++;
         }
 
-        return ['count' => $synced];
+        return [
+            'count'    => $synced,
+            'uploaded' => $uploaded,
+        ];
     }
 
     /**

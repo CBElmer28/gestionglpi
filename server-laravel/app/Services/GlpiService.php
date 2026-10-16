@@ -219,6 +219,40 @@ class GlpiService
     }
 
     /**
+     * Crea una Editorial (Manufacturer) en GLPI.
+     */
+    public function createPublisher(string $name): ?int
+    {
+        try {
+            $payload = [
+                'input' => [
+                    'name'         => $name,
+                    'entities_id'  => 0,
+                    'is_recursive' => 1,
+                    'comment'      => 'Registrado desde escaneo/catálogo local',
+                ],
+            ];
+
+            $response = $this->request('POST', "{$this->baseUrl}/Manufacturer", ['json' => $payload]);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                return $data['id'] ?? null;
+            }
+
+            Log::warning('GLPI createPublisher failed', [
+                'name'   => $name,
+                'status' => $response->status(),
+                'body'   => $response->body(),
+            ]);
+            return null;
+        } catch (\Exception $e) {
+            Log::error('GLPI createPublisher exception', ['name' => $name, 'error' => $e->getMessage()]);
+            return null;
+        }
+    }
+
+    /**
      * Crea un Libro en GLPI.
      * Mapeo: 1:Título, 2:Autor, 3:ISBN, 4:Sinopsis, 5:Edición, 6:Género, 7:Estado, 8:Editorial
      */

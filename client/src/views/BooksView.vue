@@ -114,7 +114,7 @@
               </td>
               <td style="font-family:monospace;font-size:.82rem">{{ book.isbn }}</td>
               <td>{{ book.genre?.name || '—' }}</td>
-              <td>{{ book.publisher?.name || '—' }}</td>
+              <td>{{ book.publisher?.name || book.publisher || '—' }}</td>
               <td>
                 <span class="badge" :class="statusBadge(book.status)">{{ book.status }}</span>
               </td>

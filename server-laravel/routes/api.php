@@ -40,8 +40,9 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // ── Escáner de libros ──
-    Route::get('/scans',  [ScanController::class, 'index'])->middleware('permission:books.view');
-    Route::post('/scans', [ScanController::class, 'store'])->middleware('permission:books.manage');
+    Route::get('/scans',             [ScanController::class, 'index'])->middleware('permission:books.view');
+    Route::get('/scans/lookup/{isbn}', [ScanController::class, 'lookupIsbn'])->middleware('permission:books.view');
+    Route::post('/scans',            [ScanController::class, 'store'])->middleware('permission:books.manage');
 
     // ── Préstamos ─────────────────────────────────────────────────────────
     Route::get('/loans', [LoanController::class, 'index']);

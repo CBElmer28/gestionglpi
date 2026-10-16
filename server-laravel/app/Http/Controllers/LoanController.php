@@ -50,6 +50,7 @@ class LoanController extends Controller
             'user_name'   => ['required', 'string', 'max:255', new \App\Rules\SafeText],
             'loan_date'   => 'nullable|date',
             'return_date' => 'nullable|date|after_or_equal:loan_date',
+            'device_info' => 'nullable|string|max:255',
         ]);
 
         if ($validator->fails()) {
@@ -63,6 +64,30 @@ class LoanController extends Controller
 
         if (!$result['success']) {
             return response()->json(['message' => $result['message']], 409);
+        }
+
+        // Trazabilidad IoT: Si el préstamo proviene de un escaneo, registrar el evento en scans
+        try {
+            $book = \App\Models\Book::find($data['book_id']);
+            if ($book) {
+                $lastScan = \App\Models\Scan::where('book_id', $book->id)->latest('id')->first();
+                $device = $request->input('device_info') ?: substr((string) $request->userAgent(), 0, 255);
+                \App\Models\Scan::create([
+                    'isbn'        => $book->isbn,
+                    'book_id'     => $book->id,
+                    'user_id'     => $request->user()->id,
+                    'title'       => $book->title,
+                    'author'      => $book->author,
+                    'publisher'   => $lastScan?->publisher,
+                    'cover_url'   => $lastScan?->cover_url,
+                    'photo_path'  => $lastScan?->photo_path,
+                    'result'      => 'prestamo',
+                    'source'      => 'celular',
+                    'device_info' => $device,
+                ]);
+            }
+        } catch (\Throwable $e) {
+            // No bloquear el préstamo si falla la telemetría secundaria
         }
 
         return response()->json(['message' => $result['message']], 201);
