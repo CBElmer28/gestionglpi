@@ -179,6 +179,7 @@
               <td>
                 <span v-if="s.result === 'nuevo'" class="chip new">Registro Nuevo</span>
                 <span v-else-if="s.result === 'prestamo'" class="chip loan-event">Préstamo</span>
+                <span v-else-if="s.result === 'devolucion'" class="chip loan-event">Devolución</span>
                 <span v-else class="chip gray">Auditoría / Verificación</span>
               </td>
               <td>
@@ -210,6 +211,10 @@
           <div class="cover big" :style="coverStyle(detail.scan)">
             <img v-if="detail.scan.photo_url" :src="detail.scan.photo_url" class="photo-full" alt="Captura física" />
           </div>
+          <div v-if="detail.scan.photo_back_url" class="back-capture">
+            <small class="muted">Contraportada</small>
+            <img :src="detail.scan.photo_back_url" class="photo-full" alt="Contraportada" />
+          </div>
           <div class="detail-info">
             <h2>{{ detail.scan.title }}</h2>
             <div class="muted">{{ detail.scan.author }}</div>
@@ -226,6 +231,10 @@
               <dt>Operación</dt>
               <dd>
                 <span v-if="detail.scan.result === 'nuevo'">Registro de libro nuevo en biblioteca</span>
+                <span v-else-if="detail.scan.result === 'devolucion'">
+                  Devolución registrada por <strong>{{ detail.scan.reader || 'Lector' }}</strong>
+                  (portada y contraportada capturadas)
+                </span>
                 <span v-else-if="detail.scan.result === 'prestamo'">
                   Préstamo asignado a <strong>{{ detail.scan.reader || 'Lector' }}</strong>
                 </span>
@@ -439,6 +448,8 @@ function exportCsv() {
   font-size: 0.7rem; color: var(--c-text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .photo-full { width: 100%; height: 100%; object-fit: cover; border-radius: 4px; }
+.back-capture { width: 120px; display: flex; flex-direction: column; gap: 4px; }
+.back-capture .photo-full { height: 168px; }
 
 /* Modal */
 .overlay {

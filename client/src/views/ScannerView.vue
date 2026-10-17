@@ -38,12 +38,24 @@
 
       <button
         class="mode-tab"
+        :class="{ active: currentMode === 'return' }"
+        @click="switchMode('return')"
+      >
+        <font-awesome-icon icon="reply" />
+        <div>
+          <strong>3. Devolver libro</strong>
+          <small>Cierra el préstamo y guarda la foto de portada y contraportada</small>
+        </div>
+      </button>
+
+      <button
+        class="mode-tab"
         :class="{ active: currentMode === 'check' }"
         @click="switchMode('check')"
       >
         <font-awesome-icon icon="search" />
         <div>
-          <strong>3. Consultar estado / Auditar</strong>
+          <strong>4. Consultar estado / Auditar</strong>
           <small>Verifica si está Disponible, Prestado o No registrado</small>
         </div>
       </button>
@@ -52,11 +64,11 @@
     <div class="card">
       <div class="card-body scanner-body">
         <!-- Contenedor del video de la cámara -->
-        <div id="reader" class="reader" v-show="!previewModal.visible && !loanModal.visible && !checkModal.visible"></div>
+        <div id="reader" class="reader" v-show="!previewModal.visible && !loanModal.visible && !returnModal.visible && !checkModal.visible"></div>
 
         <p v-if="cameraError" class="msg-error">{{ cameraError }}</p>
 
-        <div class="scanner-actions" v-if="!previewModal.visible && !loanModal.visible && !checkModal.visible">
+        <div class="scanner-actions" v-if="!previewModal.visible && !loanModal.visible && !returnModal.visible && !checkModal.visible">
           <button v-if="!cameraOn" class="btn btn-primary" @click="startCamera">
             <font-awesome-icon icon="camera" /> Iniciar cámara
           </button>
@@ -87,7 +99,7 @@
         </div>
 
         <!-- Entrada manual de ISBN alternativa -->
-        <div class="manual" v-if="!previewModal.visible && !loanModal.visible && !checkModal.visible">
+        <div class="manual" v-if="!previewModal.visible && !loanModal.visible && !returnModal.visible && !checkModal.visible">
           <label class="filter-label">¿Sin cámara? Escribe el código ISBN</label>
           <div class="manual-row">
             <input v-model="manualIsbn" class="form-control" inputmode="numeric" placeholder="978..." />
@@ -229,6 +241,79 @@
     </div>
 
     <!-- ============================================================== -->
+    <!-- MODAL: DEVOLUCIÓN CON EVIDENCIA (PORTADA + CONTRAPORTADA)      -->
+    <!-- ============================================================== -->
+    <div v-if="returnModal.visible" class="overlay" @click.self="cancelReturn">
+      <div class="modal-box">
+        <div class="modal-head">
+          <h3><font-awesome-icon icon="reply" /> Registrar Devolución</h3>
+          <button class="close" @click="cancelReturn">×</button>
+        </div>
+
+        <div class="loan-book-container">
+          <div class="loan-cover-wrap">
+            <img v-if="returnModal.book.cover_url" :src="returnModal.book.cover_url" class="loan-cover" alt="Portada oficial" />
+            <div v-else class="preview-placeholder">Sin carátula</div>
+          </div>
+
+          <div class="loan-book-details">
+            <h4>{{ returnModal.book.title }}</h4>
+            <p class="muted">{{ returnModal.book.author }}</p>
+            <p class="mono muted">ISBN: {{ returnModal.book.isbn }}</p>
+            <div>
+              Prestado a: <strong>{{ returnModal.loan?.user_name || 'Lector' }}</strong>
+            </div>
+            <div class="muted">
+              Fecha estimada de devolución: {{ returnModal.loan?.return_date || 'Sin fecha' }}
+              <span v-if="returnOverdue" class="chip bad">Atrasado</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="alert-info">
+          Toma una foto de la <strong>portada</strong> y otra de la <strong>contraportada</strong> del
+          libro para dejar constancia de su estado al ser devuelto.
+        </div>
+
+        <div class="return-photos">
+          <div class="return-slot">
+            <label class="filter-label">Portada (frente) *</label>
+            <img v-if="returnModal.front.url" :src="returnModal.front.url" class="cover-img captured" alt="Portada devuelta" />
+            <div v-else class="preview-placeholder">Pendiente</div>
+            <label class="btn btn-ghost btn-sm">
+              <font-awesome-icon icon="camera" />
+              {{ returnModal.front.url ? 'Repetir foto' : 'Tomar foto' }}
+              <input type="file" accept="image/*" capture="environment" hidden @change="onReturnPhoto('front', $event)" />
+            </label>
+          </div>
+
+          <div class="return-slot">
+            <label class="filter-label">Contraportada (código de barras) *</label>
+            <img v-if="returnModal.back.url" :src="returnModal.back.url" class="cover-img captured" alt="Contraportada devuelta" />
+            <div v-else class="preview-placeholder">Pendiente</div>
+            <label class="btn btn-ghost btn-sm">
+              <font-awesome-icon icon="camera" />
+              {{ returnModal.back.url ? 'Repetir foto' : 'Tomar foto' }}
+              <input type="file" accept="image/*" capture="environment" hidden @change="onReturnPhoto('back', $event)" />
+            </label>
+            <small v-if="returnModal.backFromScan" class="muted">Capturada al leer el ISBN.</small>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-ghost" @click="cancelReturn" :disabled="busy">Cancelar</button>
+          <button
+            class="btn btn-primary"
+            :disabled="busy || !returnModal.front.blob || !returnModal.back.blob"
+            @click="confirmReturn"
+          >
+            {{ busy ? 'Registrando...' : 'Confirmar Devolución' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================== -->
     <!-- MODAL 3: CONSULTAR / AUDITAR ESTADO DE LIBRO (NO REGISTRA)     -->
     <!-- ============================================================== -->
     <div v-if="checkModal.visible" class="overlay" @click.self="closeCheckModal">
@@ -283,8 +368,9 @@ import { ref, reactive, computed, onBeforeUnmount } from 'vue'
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode'
 import { scanRepository } from '@/repositories/scanRepository'
 import { loanService } from '@/services/loanService'
+import { loanRepository } from '@/repositories/loanRepository'
 
-// Modos: 'register' | 'loan' | 'check'
+// Modos: 'register' | 'loan' | 'return' | 'check'
 const currentMode = ref('register')
 
 function switchMode(mode) {
@@ -324,6 +410,23 @@ const loanModal = reactive({
   book: {},
   userName: '',
   returnDate: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
+})
+
+// Modal de devolución (evidencia: portada + contraportada)
+const returnModal = reactive({
+  visible: false,
+  book: {},
+  loan: null,
+  backFromScan: false,
+  front: { blob: null, url: null },
+  back: { blob: null, url: null },
+})
+
+const returnOverdue = computed(() => {
+  const loan = returnModal.loan
+  if (!loan) return false
+  if (loan.status === 'Atrasado') return true
+  return Boolean(loan.return_date) && loan.return_date < new Date().toISOString().split('T')[0]
 })
 
 // Modal de consulta / auditoría
@@ -502,8 +605,43 @@ async function processScan(isbn, photoBlob) {
         loanModal.visible = true
         stopCamera()
       }
+    } else if (currentMode.value === 'return') {
+      // Modo 3: Devolver (exige préstamo vigente y evidencia fotográfica)
+      if (!lookup.exists) {
+        result.value = {
+          ok: false,
+          label: 'Libro no registrado',
+          message: 'Este ISBN no existe en el catálogo de la biblioteca.',
+          isbn,
+        }
+      } else if (lookup.status !== 'Prestado' || !lookup.active_loan) {
+        result.value = {
+          ok: false,
+          label: 'Este libro no está prestado',
+          title: lookup.title,
+          isbn,
+          message: `Estado actual: ${lookup.status}. No hay nada que devolver.`,
+          cover: lookup.cover_url,
+        }
+      } else {
+        resetReturnPhotos()
+        returnModal.book = {
+          title: lookup.title,
+          author: lookup.author,
+          isbn: lookup.isbn,
+          cover_url: lookup.cover_url,
+        }
+        returnModal.loan = lookup.active_loan
+        // El código de barras está en la contraportada: el fotograma de la lectura sirve como esa captura
+        if (photoBlob) {
+          setReturnPhoto('back', photoBlob)
+          returnModal.backFromScan = true
+        }
+        returnModal.visible = true
+        stopCamera()
+      }
     } else {
-      // Modo 3: Consultar / Auditar (NUNCA crea el libro)
+      // Modo 4: Consultar / Auditar (NUNCA crea el libro)
       checkModal.data = lookup
       checkModal.visible = true
       stopCamera()
@@ -587,6 +725,86 @@ async function confirmLoan() {
 
 function cancelLoan() {
   loanModal.visible = false
+}
+
+// Reduce la foto para no superar el límite de subida (las cámaras de celular generan 3-8 MB)
+function compressImage(file, maxSide = 1280) {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file)
+    const img = new Image()
+    img.onload = () => {
+      const scale = Math.min(1, maxSide / Math.max(img.width, img.height))
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.round(img.width * scale)
+      canvas.height = Math.round(img.height * scale)
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height)
+      URL.revokeObjectURL(url)
+      canvas.toBlob((blob) => resolve(blob || file), 'image/jpeg', 0.82)
+    }
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      resolve(file)
+    }
+    img.src = url
+  })
+}
+
+function setReturnPhoto(side, blob) {
+  const slot = returnModal[side]
+  if (slot.url) URL.revokeObjectURL(slot.url)
+  slot.blob = blob
+  slot.url = URL.createObjectURL(blob)
+}
+
+function resetReturnPhotos() {
+  for (const side of ['front', 'back']) {
+    if (returnModal[side].url) URL.revokeObjectURL(returnModal[side].url)
+    returnModal[side].blob = null
+    returnModal[side].url = null
+  }
+  returnModal.backFromScan = false
+}
+
+async function onReturnPhoto(side, event) {
+  const file = event.target.files?.[0]
+  event.target.value = ''
+  if (!file) return
+  setReturnPhoto(side, await compressImage(file))
+  if (side === 'back') returnModal.backFromScan = false
+}
+
+async function confirmReturn() {
+  busy.value = true
+  try {
+    const fd = new FormData()
+    fd.append('isbn', returnModal.book.isbn)
+    fd.append('device_info', getDeviceInfo())
+    fd.append('front_photo', returnModal.front.blob, 'portada.jpg')
+    fd.append('back_photo', returnModal.back.blob, 'contraportada.jpg')
+
+    const data = await loanRepository.returnByIsbn(fd)
+    const reader = returnModal.loan?.user_name
+    result.value = {
+      ok: true,
+      label: '✔ Devolución registrada con éxito',
+      title: returnModal.book.title,
+      cover: returnModal.book.cover_url || returnModal.front.url,
+      message: data.book_status === 'Mantenimiento'
+        ? `Devuelto por ${reader}. El libro pasó a Mantenimiento por una incidencia reportada.`
+        : `Devuelto por ${reader}. El libro está nuevamente Disponible.`,
+    }
+    feedback(true)
+    cancelReturn()
+  } catch (err) {
+    alert(err.response?.data?.message || 'Error al registrar la devolución.')
+  } finally {
+    busy.value = false
+  }
+}
+
+function cancelReturn() {
+  returnModal.visible = false
+  resetReturnPhotos()
 }
 
 function closeCheckModal() {
@@ -718,6 +936,14 @@ onBeforeUnmount(stopCamera)
 .alert-warn {
   background: #fefce8; color: #854d0e; padding: 10px; border-radius: var(--radius-md); font-size: 0.85rem;
 }
+
+/* Devolución: dos capturas */
+.return-photos {
+  display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); margin-top: var(--sp-4);
+}
+.return-slot { display: flex; flex-direction: column; gap: 6px; align-items: stretch; }
+.return-slot .btn { justify-content: center; cursor: pointer; }
+.return-slot .cover-img, .return-slot .preview-placeholder { max-height: 220px; }
 
 /* Préstamo y Consulta */
 .loan-book-container, .check-container {
