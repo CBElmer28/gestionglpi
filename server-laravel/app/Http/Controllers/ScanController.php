@@ -70,11 +70,13 @@ class ScanController extends Controller
             $activeLoan = null;
             if ($book->status === 'Prestado') {
                 $loan = \App\Models\Loan::where('book_id', $book->id)
-                    ->where('status', 'Activo')
+                    ->whereIn('status', ['Activo', 'Atrasado'])
                     ->latest('id')
                     ->first();
                 if ($loan) {
                     $activeLoan = [
+                        'id'          => $loan->id,
+                        'status'      => $loan->status,
                         'user_name'   => $loan->user_name,
                         'loan_date'   => $loan->loan_date?->format('Y-m-d'),
                         'return_date' => $loan->return_date?->format('Y-m-d'),
@@ -218,7 +220,7 @@ class ScanController extends Controller
 
         // Si es un evento de préstamo, buscar el lector asociado
         $reader = null;
-        if ($s->result === 'prestamo') {
+        if (in_array($s->result, ['prestamo', 'devolucion'], true)) {
             $loan = \App\Models\Loan::where('book_id', $s->book_id)->latest('id')->first();
             $reader = $loan?->user_name;
         }
@@ -231,6 +233,7 @@ class ScanController extends Controller
             'publisher'   => $s->publisher,
             'cover_url'   => $s->cover_url,
             'photo_url'   => $s->photo_path ? '/storage/' . $s->photo_path : null,
+            'photo_back_url' => $s->photo_back_path ? '/storage/' . $s->photo_back_path : null,
             'device_info' => $s->device_info,
             'result'      => $s->result,
             'reader'      => $reader,

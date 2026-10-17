@@ -93,6 +93,76 @@ class LoanController extends Controller
         return response()->json(['message' => $result['message']], 201);
     }
 
+    /**
+     * Devolución mediante lector de ISBN, con evidencia fotográfica
+     * de la portada y la contraportada del ejemplar devuelto.
+     */
+    public function returnByIsbn(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'isbn'        => ['required', 'string', 'max:30'],
+            'front_photo' => ['required', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
+            'back_photo'  => ['required', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
+            'device_info' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $isbn  = preg_replace('/[^0-9]/', '', (string) $request->input('isbn'));
+        $found = $this->loanService->findOpenLoanByIsbn($isbn);
+
+        if (!$found['success']) {
+            return response()->json(['message' => $found['message']], $found['status']);
+        }
+
+        $device    = $request->input('device_info') ?: substr((string) $request->userAgent(), 0, 255);
+        $frontPath = $request->file('front_photo')->store('returns', 'public');
+        $backPath  = $request->file('back_photo')->store('returns', 'public');
+
+        $result = $this->loanService->returnLoan($found['loan']->id, [
+            'return_front_photo' => $frontPath,
+            'return_back_photo'  => $backPath,
+            'return_device'      => $device,
+            'returned_by'        => $request->user()->id,
+        ]);
+
+        if (!$result['success']) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete([$frontPath, $backPath]);
+            return response()->json(['message' => $result['message']], 409);
+        }
+
+        $book = $found['book']->fresh();
+
+        // Trazabilidad IoT: evento de devolución con ambas capturas
+        try {
+            $lastScan = \App\Models\Scan::where('book_id', $book->id)->whereNotNull('cover_url')->latest('id')->first();
+            \App\Models\Scan::create([
+                'isbn'            => $book->isbn,
+                'book_id'         => $book->id,
+                'user_id'         => $request->user()->id,
+                'title'           => $book->title,
+                'author'          => $book->author,
+                'publisher'       => $lastScan?->publisher,
+                'cover_url'       => $lastScan?->cover_url,
+                'photo_path'      => $frontPath,
+                'photo_back_path' => $backPath,
+                'result'          => 'devolucion',
+                'source'          => 'celular',
+                'device_info'     => $device,
+            ]);
+        } catch (\Throwable $e) {
+            // No bloquear la devolución si falla la telemetría secundaria
+        }
+
+        return response()->json([
+            'message'     => $result['message'],
+            'book_status' => $book->status,
+            'loan'        => $found['loan']->fresh(),
+        ]);
+    }
+
     public function returnLoan(int $id): JsonResponse
     {
         $result = $this->loanService->returnLoan($id);

@@ -50,6 +50,7 @@ Route::middleware('auth:sanctum')->group(function () {
     
     Route::middleware('permission:loans.manage')->group(function () {
         Route::post('/loans', [LoanController::class, 'store']);
+        Route::post('/loans/return-by-isbn', [LoanController::class, 'returnByIsbn']);
         Route::put('/loans/{id}/return', [LoanController::class, 'returnLoan']);
         Route::delete('/loans/{id}', [LoanController::class, 'destroy']);
     });

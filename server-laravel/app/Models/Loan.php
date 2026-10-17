@@ -21,7 +21,23 @@ class Loan extends Model
         'loan_date',
         'return_date',
         'status',
+        'return_front_photo',
+        'return_back_photo',
+        'return_device',
+        'returned_by',
     ];
+
+    protected $appends = ['return_front_url', 'return_back_url'];
+
+    public function getReturnFrontUrlAttribute(): ?string
+    {
+        return $this->return_front_photo ? '/storage/' . $this->return_front_photo : null;
+    }
+
+    public function getReturnBackUrlAttribute(): ?string
+    {
+        return $this->return_back_photo ? '/storage/' . $this->return_back_photo : null;
+    }
 
     protected $casts = [
         'loan_date'   => 'date',
