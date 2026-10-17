@@ -85,6 +85,15 @@
                     {{ loan.book?.status === 'Mantenimiento' ? 'Ver Info' : 'Reportar' }}
                   </button>
 
+                  <template v-if="loan.status === 'Devuelto' && loan.return_front_url">
+                    <a class="btn btn-ghost btn-sm" :href="loan.return_front_url" target="_blank" rel="noopener" title="Foto de portada al devolver">
+                      <font-awesome-icon icon="camera" /> Portada
+                    </a>
+                    <a v-if="loan.return_back_url" class="btn btn-ghost btn-sm" :href="loan.return_back_url" target="_blank" rel="noopener" title="Foto de contraportada al devolver">
+                      <font-awesome-icon icon="camera" /> Contraportada
+                    </a>
+                  </template>
+
                   <button
                     v-if="auth.can('loans.manage') && loan.status === 'Activo'"
                     class="btn btn-ghost btn-sm"

@@ -73,3 +73,7 @@ allure-results/
 server-laravel/build/allure-results/
 client/allure-results/
 client/test-results/
+backups/biblioteca_dump.sql
+biblioteca_backup_*.sql
+
+*.bak

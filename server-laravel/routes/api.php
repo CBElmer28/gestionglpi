@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ScanController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BookController;
 use App\Http\Controllers\GlpiController;
@@ -38,12 +39,18 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/books/{id}', [BookController::class, 'destroy']);
     });
 
+    // ── Escáner de libros ──
+    Route::get('/scans',             [ScanController::class, 'index'])->middleware('permission:books.view');
+    Route::get('/scans/lookup/{isbn}', [ScanController::class, 'lookupIsbn'])->middleware('permission:books.view');
+    Route::post('/scans',            [ScanController::class, 'store'])->middleware('permission:books.manage');
+
     // ── Préstamos ─────────────────────────────────────────────────────────
     Route::get('/loans', [LoanController::class, 'index']);
     Route::get('/loans/{id}', [LoanController::class, 'show']);
     
     Route::middleware('permission:loans.manage')->group(function () {
         Route::post('/loans', [LoanController::class, 'store']);
+        Route::post('/loans/return-by-isbn', [LoanController::class, 'returnByIsbn']);
         Route::put('/loans/{id}/return', [LoanController::class, 'returnLoan']);
         Route::delete('/loans/{id}', [LoanController::class, 'destroy']);
     });

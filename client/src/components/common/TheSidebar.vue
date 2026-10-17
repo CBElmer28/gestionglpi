@@ -84,6 +84,8 @@ const mainItems = computed(() => {
   const items = [
     { icon: 'chart-line',     label: 'Dashboard',   route: '/dashboard' },
     { icon: 'book',           label: 'Libros',      route: '/books',      permission: 'books.view' },
+    { icon: 'barcode',        label: 'Escáner',     route: '/scanner',    permission: 'books.manage' },
+    { icon: 'clipboard-list', label: 'Escaneados',  route: '/scans',      permission: 'books.manage' },
     { icon: 'tags',           label: 'Géneros',     route: '/genres',     permission: 'catalog.manage' },
     { icon: 'building',       label: 'Editoriales', route: '/publishers', permission: 'catalog.manage' },
     { icon: 'clipboard-list', label: 'Préstamos',   route: '/loans',     permission: 'loans.view_own' },

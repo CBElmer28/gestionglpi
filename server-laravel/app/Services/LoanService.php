@@ -67,7 +67,7 @@ class LoanService
     /**
      * Marca un préstamo como devuelto.
      */
-    public function returnLoan(int $id): array
+    public function returnLoan(int $id, array $evidence = []): array
     {
         $loan = $this->loanRepository->find($id);
 
@@ -79,11 +79,11 @@ class LoanService
             return ['success' => false, 'message' => 'Este préstamo ya fue devuelto.'];
         }
 
-        DB::transaction(function () use ($loan) {
-            $this->loanRepository->update($loan->id, [
+        DB::transaction(function () use ($loan, $evidence) {
+            $this->loanRepository->update($loan->id, array_merge([
                 'status'      => 'Devuelto',
                 'return_date' => Carbon::today()->toDateString(),
-            ]);
+            ], $evidence));
 
             // Verificar si hubo incidencias reportadas durante el préstamo
             $hasIncidents = \App\Models\Report::where('book_id', $loan->book_id)
@@ -97,6 +97,27 @@ class LoanService
         });
 
         return ['success' => true, 'message' => 'Devolución registrada correctamente.'];
+    }
+
+    /**
+     * Ubica el préstamo vigente (Activo o Atrasado) del libro con ese ISBN.
+     */
+    public function findOpenLoanByIsbn(string $isbn): array
+    {
+        $book = \App\Models\Book::where('isbn', $isbn)->first();
+        if (!$book) {
+            return ['success' => false, 'status' => 404, 'message' => 'No hay ningún libro registrado con ese ISBN.'];
+        }
+
+        $loan = Loan::where('book_id', $book->id)
+            ->whereIn('status', ['Activo', 'Atrasado'])
+            ->latest('id')
+            ->first();
+        if (!$loan) {
+            return ['success' => false, 'status' => 409, 'message' => 'Este libro no tiene un préstamo vigente que devolver.'];
+        }
+
+        return ['success' => true, 'book' => $book, 'loan' => $loan];
     }
 
     /**

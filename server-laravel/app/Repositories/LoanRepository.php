@@ -54,7 +54,7 @@ class LoanRepository implements LoanRepositoryInterface
     public function findActiveByBook(int $bookId): ?Loan
     {
         return Loan::where('book_id', $bookId)
-            ->where('status', 'Activo')
+            ->whereIn('status', ['Activo', 'Atrasado'])
             ->first();
     }
 

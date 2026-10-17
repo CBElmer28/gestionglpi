@@ -21,6 +21,11 @@ export const loanRepository = {
     return data
   },
 
+  async returnByIsbn(formData) {
+    const { data } = await loanService.returnByIsbn(formData)
+    return data
+  },
+
   async delete(id) {
     await loanService.delete(id)
     return true
