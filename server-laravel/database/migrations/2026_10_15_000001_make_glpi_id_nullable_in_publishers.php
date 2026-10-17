@@ -1,8 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -11,9 +10,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('publishers', function (Blueprint $table) {
-            $table->integer('glpi_id')->nullable()->change();
-        });
+        // SQL directo: ->change() exige doctrine/dbal. SQLite (pruebas) no se modifica.
+        if (in_array(DB::getDriverName(), ['mysql', 'mariadb'], true)) {
+            DB::statement('ALTER TABLE publishers MODIFY glpi_id INT NULL');
+        }
     }
 
     /**
@@ -21,8 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('publishers', function (Blueprint $table) {
-            $table->integer('glpi_id')->nullable(false)->change();
-        });
+        if (in_array(DB::getDriverName(), ['mysql', 'mariadb'], true)) {
+            DB::statement('ALTER TABLE publishers MODIFY glpi_id INT NOT NULL');
+        }
     }
 };
