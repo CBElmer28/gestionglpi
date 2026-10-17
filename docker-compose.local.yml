@@ -1,0 +1,110 @@
+# Stack completo para correr TODO en esta PC (Cloudflare Tunnel se agrega aparte).
+#   docker compose -f docker-compose.local.yml up -d --build
+# Frontend: http://localhost:8082  |  API: http://localhost:8081/api  |  GLPI: http://localhost:8080
+services:
+  db:
+    image: mysql:9
+    container_name: biblioteca-db
+    restart: unless-stopped
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-BibliotecaRoot2026}
+      MYSQL_DATABASE: biblioteca
+    ports:
+      - "127.0.0.1:3307:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  glpi-db:
+    image: mariadb:10.11
+    container_name: glpi-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${GLPI_DB_ROOT_PASSWORD:-root_pass}
+      MYSQL_DATABASE: glpi_db
+      MYSQL_USER: glpi_user
+      MYSQL_PASSWORD: ${GLPI_DB_PASSWORD:-glpi_pass}
+    volumes:
+      - glpi_db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  glpi:
+    image: glpi/glpi:11.0.6
+    container_name: glpi
+    restart: unless-stopped
+    environment:
+      GLPI_DB_HOST: glpi-db
+      GLPI_DB_PORT: "3306"
+      GLPI_DB_NAME: glpi_db
+      GLPI_DB_USER: glpi_user
+      GLPI_DB_PASSWORD: ${GLPI_DB_PASSWORD:-glpi_pass}
+    ports:
+      - "8080:80"
+    volumes:
+      - glpi_data:/var/glpi
+    depends_on:
+      glpi-db:
+        condition: service_healthy
+
+  laravel-backend:
+    build:
+      context: ./server-laravel
+      dockerfile: Dockerfile
+    container_name: biblioteca-laravel
+    restart: unless-stopped
+    env_file:
+      - ./server-laravel/.env
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_DATABASE: biblioteca
+      DB_USERNAME: root
+      DB_PASSWORD: ${DB_ROOT_PASSWORD:-BibliotecaRoot2026}
+      GLPI_URL: http://glpi/api.php/v1
+      MAIL_HOST: mailpit
+      MAIL_PORT: "1025"
+    ports:
+      - "8081:80"
+    volumes:
+      - storage_public:/var/www/html/storage/app/public
+    depends_on:
+      db:
+        condition: service_healthy
+      glpi:
+        condition: service_started
+
+  biblioteca-frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: biblioteca-frontend
+    restart: unless-stopped
+    ports:
+      - "8082:80"
+    depends_on:
+      - laravel-backend
+
+  mailpit:
+    image: axllent/mailpit
+    container_name: mailpit
+    restart: unless-stopped
+    ports:
+      - "8025:8025"
+
+volumes:
+  db_data:
+  glpi_db_data:
+  glpi_data:
+  storage_public:
